@@ -1,1 +1,33 @@
+# Local planning and editor-only artifacts
 .local/
+.DS_Store
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+coverage/
+.turbo/
+.vite/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# Docker and local runtime data
+docker-data/
+*.pid
+
+# IDE
+.idea/
+.vscode/
