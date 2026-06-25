@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PublicationStatus {
+  DRAFT      @map("draft")
+  SCHEDULED  @map("scheduled")
+  PUBLISHING @map("publishing")
+  PUBLISHED  @map("published")
+  PARTIAL    @map("partial")
+  FAILED     @map("failed")
+}
+
+enum Platform {
+  YOUTUBE   @map("youtube")
+  VK        @map("vk")
+  INSTAGRAM @map("instagram")
+  THREADS   @map("threads")
+  TIKTOK    @map("tiktok")
+  PINTEREST @map("pinterest")
+}
+
+enum PlatformResultStatus {
+  PENDING    @map("pending")
+  PUBLISHING @map("publishing")
+  PUBLISHED  @map("published")
+  FAILED     @map("failed")
+  SKIPPED    @map("skipped")
+}
+
+model User {
+  id                        String            @id @default(uuid()) @db.Uuid
+  email                     String            @unique
+  passwordHash              String            @map("password_hash")
+  emailNotificationsEnabled Boolean           @default(true) @map("email_notifications_enabled")
+  timezone                  String            @default("UTC")
+  createdAt                 DateTime          @default(now()) @map("created_at")
+  updatedAt                 DateTime          @updatedAt @map("updated_at")
+  publications              Publication[]
+  platformAccounts          PlatformAccount[]
+
+  @@map("users")
+}
+
+model Publication {
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @map("user_id") @db.Uuid
+  videoR2Key  String              @map("video_r2_key")
+  defaultText String              @map("default_text")
+  scheduledAt DateTime            @map("scheduled_at")
+  status      PublicationStatus   @default(SCHEDULED)
+  platforms   Json
+  metadata    Json?
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results     PublicationResult[]
+
+  @@index([userId, scheduledAt])
+  @@index([status, scheduledAt])
+  @@map("publications")
+}
+
+model PlatformAccount {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
+  platform              Platform
+  externalAccountId     String?   @map("external_account_id")
+  externalAccountName   String?   @map("external_account_name")
+  accessTokenEncrypted  String    @map("access_token_encrypted")
+  refreshTokenEncrypted String?   @map("refresh_token_encrypted")
+  expiresAt             DateTime? @map("expires_at")
+  metadata              Json?
+  isActive              Boolean   @default(true) @map("is_active")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+  @@index([platform, isActive])
+  @@map("platform_accounts")
+}
+
+model PublicationResult {
+  id            String               @id @default(uuid()) @db.Uuid
+  publicationId String               @map("publication_id") @db.Uuid
+  platform      Platform
+  status        PlatformResultStatus @default(PENDING)
+  externalId    String?              @map("external_id")
+  resultUrl     String?              @map("result_url")
+  errorCode     String?              @map("error_code")
+  errorMessage  String?              @map("error_message")
+  rawResponse   Json?                @map("raw_response")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+  publication   Publication          @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@unique([publicationId, platform])
+  @@index([status])
+  @@map("publication_results")
+}

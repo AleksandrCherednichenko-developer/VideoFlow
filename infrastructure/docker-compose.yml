@@ -43,8 +43,10 @@ services:
     container_name: videoflow-api
     restart: unless-stopped
     env_file:
-      - ../.env
+      - path: ../.env
+        required: false
     environment:
+      API_HOST: 0.0.0.0
       DATABASE_URL: ${DATABASE_URL:-postgresql://videoflow:videoflow_password@postgres:5432/videoflow?schema=public}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
     ports:
@@ -65,7 +67,8 @@ services:
     restart: unless-stopped
     command: ["pnpm", "worker"]
     env_file:
-      - ../.env
+      - path: ../.env
+        required: false
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://videoflow:videoflow_password@postgres:5432/videoflow?schema=public}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
