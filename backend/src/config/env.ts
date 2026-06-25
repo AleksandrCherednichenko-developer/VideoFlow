@@ -17,7 +17,7 @@ const envSchema = z.object({
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   JWT_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
-  ENCRYPTION_KEY: z.string().min(1),
+  ENCRYPTION_KEY: z.string().min(32),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_USER: z.string().optional(),

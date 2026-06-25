@@ -1,6 +1,8 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 
+import { AppError } from "../errors/AppError.js";
+
 const ERROR_NAME = {
   VALIDATION: "ValidationError",
   INTERNAL: "InternalServerError",
@@ -21,6 +23,16 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     };
 
     res.status(400).json(body);
+    return;
+  }
+
+  if (error instanceof AppError) {
+    const body: ApiErrorBody = {
+      error: error.code,
+      message: error.message,
+    };
+
+    res.status(error.statusCode).json(body);
     return;
   }
 
