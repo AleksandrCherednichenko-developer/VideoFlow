@@ -41,6 +41,47 @@ When backend and frontend packages are added:
 pnpm dev
 ```
 
+## Upload API (Cloudflare R2)
+
+Authenticated endpoints for direct browser-to-R2 video upload:
+
+- `POST /uploads/presign` — returns `videoR2Key`, `uploadUrl`, `expiresAt`, and required upload headers
+- `POST /uploads/complete` — verifies the uploaded object exists in R2
+
+Configure R2 credentials in `.env`:
+
+- `R2_ACCOUNT_ID`
+- `R2_ACCESS_KEY`
+- `R2_SECRET_KEY`
+- `R2_BUCKET`
+- `R2_PUBLIC_URL` (optional, required later for Instagram/Threads)
+
+Manual verification flow:
+
+```bash
+# 1. Register or login and save accessToken
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+# 2. Request presigned upload URL
+curl -X POST http://localhost:3000/uploads/presign \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -d '{"filename":"clip.mp4","contentType":"video/mp4","sizeBytes":123456}'
+
+# 3. Upload the file directly to R2
+curl -X PUT "<uploadUrl>" \
+  -H "Content-Type: video/mp4" \
+  --data-binary @clip.mp4
+
+# 4. Confirm upload in backend
+curl -X POST http://localhost:3000/uploads/complete \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -d '{"videoR2Key":"<videoR2Key>"}'
+```
+
 ## Documentation
 
 - Technical documentation: [docs/VideoFlow_Technical_Documentation.md](docs/VideoFlow_Technical_Documentation.md)
