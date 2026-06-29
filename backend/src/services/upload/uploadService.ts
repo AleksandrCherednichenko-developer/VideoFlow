@@ -10,6 +10,7 @@ import {
 } from "./r2Client.js";
 import {
   ALLOWED_VIDEO_CONTENT_TYPES,
+  MAX_UPLOAD_SIZE_BYTES,
   PRESIGN_URL_EXPIRES_SECONDS,
   type CompleteUploadInput,
   type PresignUploadInput,
@@ -90,6 +91,14 @@ function mapStorageError(error: unknown): AppError {
   );
 }
 
+function isAllowedVideoContentType(
+  contentType: string,
+): contentType is (typeof ALLOWED_VIDEO_CONTENT_TYPES)[number] {
+  return ALLOWED_VIDEO_CONTENT_TYPES.includes(
+    contentType as (typeof ALLOWED_VIDEO_CONTENT_TYPES)[number],
+  );
+}
+
 export async function createPresignedUpload(
   input: PresignUploadInput,
   userId: string,
@@ -151,6 +160,25 @@ export async function completeUpload(
         422,
         "UploadVerificationFailed",
         "Uploaded video is empty or invalid",
+      );
+    }
+
+    if (metadata.sizeBytes > MAX_UPLOAD_SIZE_BYTES) {
+      throw new AppError(
+        422,
+        "UploadVerificationFailed",
+        "Uploaded video exceeds the maximum allowed size",
+      );
+    }
+
+    if (
+      metadata.contentType !== undefined &&
+      !isAllowedVideoContentType(metadata.contentType)
+    ) {
+      throw new AppError(
+        422,
+        "UploadVerificationFailed",
+        "Uploaded video content type is not supported",
       );
     }
 

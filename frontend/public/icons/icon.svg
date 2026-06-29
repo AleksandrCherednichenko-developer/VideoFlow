@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="VideoFlow">
+  <rect width="512" height="512" rx="96" fill="#0f766e"/>
+  <path fill="#ffffff" d="M154 150c0-17.7 19.7-28.3 34.5-18.6l190 124c13.4 8.8 13.4 28.4 0 37.2l-190 124C173.7 426.3 154 415.7 154 398V150z"/>
+  <path fill="#f97316" d="M136 110h64a22 22 0 0 1 0 44h-64a22 22 0 0 1 0-44zm0 248h64a22 22 0 0 1 0 44h-64a22 22 0 0 1 0-44z"/>
+</svg>

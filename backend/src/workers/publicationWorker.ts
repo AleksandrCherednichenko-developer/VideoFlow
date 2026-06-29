@@ -2,37 +2,20 @@ import { Worker } from "bullmq";
 
 import { env } from "../config/env.js";
 import { prisma } from "../db/prisma.js";
-
-const QUEUE_NAME = "publication";
-
-interface RedisConnectionOptions {
-  host: string;
-  port: number;
-  password?: string;
-  maxRetriesPerRequest: null;
-}
-
-function createRedisConnectionOptions(redisUrl: string): RedisConnectionOptions {
-  const url = new URL(redisUrl);
-  const options: RedisConnectionOptions = {
-    host: url.hostname,
-    port: Number(url.port || 6379),
-    maxRetriesPerRequest: null,
-  };
-
-  if (url.password.length > 0) {
-    options.password = decodeURIComponent(url.password);
-  }
-
-  return options;
-}
+import {
+  createRedisConnectionOptions,
+  PUBLICATION_QUEUE_NAME,
+  type PublicationJobData,
+} from "../services/publications/publicationQueue.js";
+import { processPublicationJob } from "../services/publications/publicationService.js";
 
 const connection = createRedisConnectionOptions(env.REDIS_URL);
 
-const worker = new Worker(
-  QUEUE_NAME,
+const worker = new Worker<PublicationJobData>(
+  PUBLICATION_QUEUE_NAME,
   async (job) => {
     console.info(`Received publication job ${job.id ?? "unknown"}`);
+    await processPublicationJob(job.data.publicationId);
   },
   {
     connection,

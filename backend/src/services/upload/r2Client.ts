@@ -21,6 +21,16 @@ export interface ObjectMetadata {
   contentType?: string;
 }
 
+function normalizeRequiredR2Value(value: string | undefined): string | null {
+  const normalizedValue = value?.trim();
+
+  if (normalizedValue === undefined || normalizedValue.length === 0) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
 export function getR2Config(): R2Config {
   const {
     R2_ACCOUNT_ID,
@@ -30,11 +40,16 @@ export function getR2Config(): R2Config {
     R2_PUBLIC_URL,
   } = env;
 
+  const accountId = normalizeRequiredR2Value(R2_ACCOUNT_ID);
+  const accessKeyId = normalizeRequiredR2Value(R2_ACCESS_KEY);
+  const secretAccessKey = normalizeRequiredR2Value(R2_SECRET_KEY);
+  const bucket = normalizeRequiredR2Value(R2_BUCKET);
+
   if (
-    R2_ACCOUNT_ID === undefined ||
-    R2_ACCESS_KEY === undefined ||
-    R2_SECRET_KEY === undefined ||
-    R2_BUCKET === undefined
+    accountId === null ||
+    accessKeyId === null ||
+    secretAccessKey === null ||
+    bucket === null
   ) {
     throw new AppError(
       503,
@@ -44,14 +59,16 @@ export function getR2Config(): R2Config {
   }
 
   const config: R2Config = {
-    accountId: R2_ACCOUNT_ID,
-    accessKeyId: R2_ACCESS_KEY,
-    secretAccessKey: R2_SECRET_KEY,
-    bucket: R2_BUCKET,
+    accountId,
+    accessKeyId,
+    secretAccessKey,
+    bucket,
   };
 
-  if (R2_PUBLIC_URL !== undefined && R2_PUBLIC_URL.length > 0) {
-    config.publicUrl = R2_PUBLIC_URL.replace(/\/$/, "");
+  const publicUrl = R2_PUBLIC_URL?.trim();
+
+  if (publicUrl !== undefined && publicUrl.length > 0) {
+    config.publicUrl = publicUrl.replace(/\/$/, "");
   }
 
   return config;

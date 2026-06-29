@@ -8,6 +8,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
+import { publicationRouter } from "./routes/publication.routes.js";
 import { uploadRouter } from "./routes/upload.routes.js";
 
 export function createApp(): express.Express {
@@ -27,6 +28,7 @@ export function createApp(): express.Express {
   app.use(healthRouter);
   app.use(authRouter);
   app.use(uploadRouter);
+  app.use(publicationRouter);
 
   app.use(errorHandler);
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "../../api/errors/AppError.js";
+import { MAX_UPLOAD_SIZE_BYTES } from "./uploadSchemas.js";
 import {
   assertUserOwnsUploadKey,
   buildVideoR2Key,
@@ -123,6 +124,36 @@ describe("uploadService", () => {
     ).rejects.toMatchObject({
       statusCode: 404,
       code: "UploadNotFound",
+    });
+  });
+
+  it("rejects uploaded objects larger than the configured max size", async () => {
+    const videoR2Key = buildVideoR2Key(userId, "mp4");
+    mockedGetObjectMetadata.mockResolvedValue({
+      sizeBytes: MAX_UPLOAD_SIZE_BYTES + 1,
+      contentType: "video/mp4",
+    });
+
+    await expect(
+      completeUpload({ videoR2Key }, userId),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      code: "UploadVerificationFailed",
+    });
+  });
+
+  it("rejects uploaded objects with unsupported content types", async () => {
+    const videoR2Key = buildVideoR2Key(userId, "mp4");
+    mockedGetObjectMetadata.mockResolvedValue({
+      sizeBytes: 2048,
+      contentType: "application/octet-stream",
+    });
+
+    await expect(
+      completeUpload({ videoR2Key }, userId),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      code: "UploadVerificationFailed",
     });
   });
 
