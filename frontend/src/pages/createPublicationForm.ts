@@ -24,6 +24,12 @@ export interface PlatformOverrideState {
   vkText: string;
 }
 
+export interface SelectedVideoFile {
+  name: string;
+  size: number;
+  type: string;
+}
+
 export interface CreatePublicationFormState {
   videoR2Key: string;
   defaultText: string;
@@ -32,6 +38,19 @@ export interface CreatePublicationFormState {
   platforms: PlatformSelectionState;
   youtubeTitle: string;
   overrides: PlatformOverrideState;
+}
+
+export interface CreatePublicationValidationState
+  extends Omit<CreatePublicationFormState, "videoR2Key"> {
+  selectedFile: SelectedVideoFile | null;
+}
+
+export interface CreatePublicationValidationErrors {
+  selectedFile?: string;
+  defaultText?: string;
+  scheduledAt?: string;
+  platforms?: string;
+  youtubeTitle?: string;
 }
 
 export function formatFileSize(sizeBytes: number): string {
@@ -55,6 +74,24 @@ export function isAllowedVideoContentType(contentType: string): boolean {
   return ALLOWED_VIDEO_CONTENT_TYPES.includes(
     contentType as (typeof ALLOWED_VIDEO_CONTENT_TYPES)[number],
   );
+}
+
+export function validateSelectedVideoFile(
+  file: SelectedVideoFile | null,
+): string | null {
+  if (file === null) {
+    return "Choose a video file.";
+  }
+
+  if (!isAllowedVideoContentType(file.type)) {
+    return "Use an MP4, MOV, or WebM video.";
+  }
+
+  if (file.size > MAX_VIDEO_SIZE_BYTES) {
+    return `Video must be ${formatFileSize(MAX_VIDEO_SIZE_BYTES)} or smaller.`;
+  }
+
+  return null;
 }
 
 export function localDateTimeToUtcIso(date: string, time: string): string | null {
@@ -117,4 +154,45 @@ export function buildCreatePublicationRequest(
       state.overrides,
     ),
   };
+}
+
+export function validateCreatePublicationForm(
+  state: CreatePublicationValidationState,
+): CreatePublicationValidationErrors {
+  const errors: CreatePublicationValidationErrors = {};
+  const fileError = validateSelectedVideoFile(state.selectedFile);
+
+  if (fileError !== null) {
+    errors.selectedFile = fileError;
+  }
+
+  if (state.defaultText.trim().length === 0) {
+    errors.defaultText = "Add a publication text.";
+  } else if (state.defaultText.trim().length > MAX_PUBLICATION_TEXT_LENGTH) {
+    errors.defaultText = `Text must be ${MAX_PUBLICATION_TEXT_LENGTH} characters or fewer.`;
+  }
+
+  if (localDateTimeToUtcIso(state.date, state.time) === null) {
+    errors.scheduledAt = "Choose a valid publication date and time.";
+  }
+
+  if (!state.platforms.youtube && !state.platforms.vk) {
+    errors.platforms = "Choose at least one platform.";
+  }
+
+  if (state.platforms.youtube) {
+    if (state.youtubeTitle.trim().length === 0) {
+      errors.youtubeTitle = "Add a YouTube title.";
+    } else if (state.youtubeTitle.trim().length > MAX_PUBLICATION_TITLE_LENGTH) {
+      errors.youtubeTitle = `Title must be ${MAX_PUBLICATION_TITLE_LENGTH} characters or fewer.`;
+    }
+  }
+
+  return errors;
+}
+
+export function hasCreatePublicationValidationErrors(
+  errors: CreatePublicationValidationErrors,
+): boolean {
+  return Object.keys(errors).length > 0;
 }

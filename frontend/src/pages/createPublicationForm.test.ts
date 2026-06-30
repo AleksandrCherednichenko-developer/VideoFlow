@@ -4,7 +4,10 @@ import {
   buildCreatePublicationRequest,
   buildPublicationPlatforms,
   formatFileSize,
+  hasCreatePublicationValidationErrors,
   localDateTimeToUtcIso,
+  validateCreatePublicationForm,
+  validateSelectedVideoFile,
 } from "./createPublicationForm";
 
 describe("createPublicationForm", () => {
@@ -83,5 +86,74 @@ describe("createPublicationForm", () => {
       ],
     });
     expect(request?.scheduledAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("validates selected video files", () => {
+    expect(validateSelectedVideoFile(null)).toBe("Choose a video file.");
+    expect(
+      validateSelectedVideoFile({
+        name: "clip.gif",
+        size: 1024,
+        type: "image/gif",
+      }),
+    ).toBe("Use an MP4, MOV, or WebM video.");
+    expect(
+      validateSelectedVideoFile({
+        name: "clip.mp4",
+        size: 1024,
+        type: "video/mp4",
+      }),
+    ).toBeNull();
+  });
+
+  it("returns validation errors for incomplete form state", () => {
+    const errors = validateCreatePublicationForm({
+      selectedFile: null,
+      defaultText: " ",
+      date: "",
+      time: "10:30",
+      platforms: {
+        youtube: true,
+        vk: false,
+      },
+      youtubeTitle: "",
+      overrides: {
+        youtubeText: "",
+        vkText: "",
+      },
+    });
+
+    expect(errors).toMatchObject({
+      selectedFile: "Choose a video file.",
+      defaultText: "Add a publication text.",
+      scheduledAt: "Choose a valid publication date and time.",
+      youtubeTitle: "Add a YouTube title.",
+    });
+    expect(hasCreatePublicationValidationErrors(errors)).toBe(true);
+  });
+
+  it("accepts valid MVP form state", () => {
+    const errors = validateCreatePublicationForm({
+      selectedFile: {
+        name: "clip.webm",
+        size: 1024,
+        type: "video/webm",
+      },
+      defaultText: "Launch copy",
+      date: "2026-06-29",
+      time: "10:30",
+      platforms: {
+        youtube: false,
+        vk: true,
+      },
+      youtubeTitle: "",
+      overrides: {
+        youtubeText: "",
+        vkText: "",
+      },
+    });
+
+    expect(errors).toEqual({});
+    expect(hasCreatePublicationValidationErrors(errors)).toBe(false);
   });
 });

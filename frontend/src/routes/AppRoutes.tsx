@@ -7,6 +7,7 @@ import { DashboardPage } from "../pages/DashboardPage";
 import { HistoryPage } from "../pages/HistoryPage";
 import { InstallPage } from "../pages/InstallPage";
 import { LoginPage } from "../pages/LoginPage";
+import { PublicationDetailsPage } from "../pages/PublicationDetailsPage";
 import { RegisterPage } from "../pages/RegisterPage";
 import { SchedulePage } from "../pages/SchedulePage";
 import { SettingsPage } from "../pages/SettingsPage";
@@ -27,6 +28,7 @@ export function AppRoutes() {
         <Route element={<Navigate replace to="/dashboard" />} index />
         <Route element={<DashboardPage />} path="/dashboard" />
         <Route element={<CreatePage />} path="/create" />
+        <Route element={<PublicationDetailsPage />} path="/publication/:id" />
         <Route element={<SchedulePage />} path="/schedule" />
         <Route element={<HistoryPage />} path="/history" />
         <Route element={<AccountsPage />} path="/accounts" />

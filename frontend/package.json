@@ -5,9 +5,9 @@
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "vite --host localhost",
     "build": "tsc -p tsconfig.json && vite build",
-    "preview": "vite preview --host 127.0.0.1",
+    "preview": "vite preview --host localhost",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
