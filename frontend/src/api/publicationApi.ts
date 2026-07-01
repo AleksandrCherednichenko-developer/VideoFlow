@@ -12,6 +12,17 @@ export const PUBLICATION_STATUS = {
 export type PublicationStatus =
   (typeof PUBLICATION_STATUS)[keyof typeof PUBLICATION_STATUS];
 
+export const PLATFORM_RESULT_STATUS = {
+  PENDING: "pending",
+  PUBLISHING: "publishing",
+  PUBLISHED: "published",
+  FAILED: "failed",
+  SKIPPED: "skipped",
+} as const;
+
+export type PlatformResultStatus =
+  (typeof PLATFORM_RESULT_STATUS)[keyof typeof PLATFORM_RESULT_STATUS];
+
 export const PLATFORM = {
   YOUTUBE: "youtube",
   VK: "vk",
@@ -45,8 +56,8 @@ export interface CreatePublicationRequest {
 
 export interface PublicationResultResponse {
   id: string;
-  platform: string;
-  status: string;
+  platform: MvpPlatform;
+  status: PlatformResultStatus;
   externalId: string | null;
   resultUrl: string | null;
   errorCode: string | null;
@@ -89,11 +100,36 @@ export interface GetPublicationResponse {
   publication: PublicationResponse;
 }
 
+export interface ListPublicationsResponse {
+  publications: PublicationResponse[];
+}
+
+export interface RetryPublicationResponse {
+  publication: PublicationResponse;
+}
+
+export async function listPublications(): Promise<ListPublicationsResponse> {
+  const response =
+    await httpClient.get<ListPublicationsResponse>("/publications");
+
+  return response.data;
+}
+
 export async function getPublication(
   publicationId: string,
 ): Promise<GetPublicationResponse> {
   const response = await httpClient.get<GetPublicationResponse>(
     `/publications/${publicationId}`,
+  );
+
+  return response.data;
+}
+
+export async function retryPublication(
+  publicationId: string,
+): Promise<RetryPublicationResponse> {
+  const response = await httpClient.post<RetryPublicationResponse>(
+    `/publications/${publicationId}/retry`,
   );
 
   return response.data;

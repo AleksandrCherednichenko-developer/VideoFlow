@@ -1,4 +1,5 @@
 import {
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -150,6 +151,52 @@ export async function getObjectMetadata(
         ? { contentType: response.ContentType }
         : {}),
     };
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+interface ByteArrayTransformableBody {
+  transformToByteArray(): Promise<Uint8Array>;
+}
+
+function hasByteArrayTransform(
+  body: unknown,
+): body is ByteArrayTransformableBody {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "transformToByteArray" in body &&
+    typeof body.transformToByteArray === "function"
+  );
+}
+
+export async function getObjectBuffer(
+  client: S3Client,
+  bucket: string,
+  key: string,
+): Promise<Buffer | null> {
+  try {
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
+
+    if (!hasByteArrayTransform(response.Body)) {
+      throw new AppError(
+        503,
+        "StorageUnavailable",
+        "Cloudflare R2 storage returned an unreadable object body",
+      );
+    }
+
+    return Buffer.from(await response.Body.transformToByteArray());
   } catch (error) {
     if (isNotFoundError(error)) {
       return null;

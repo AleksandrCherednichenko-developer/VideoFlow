@@ -16,6 +16,7 @@ const prismaMocks = vi.hoisted(() => ({
   },
   publicationResult: {
     upsert: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -23,6 +24,10 @@ const queueMocks = vi.hoisted(() => ({
   schedulePublicationJob: vi.fn(),
   schedulePublicationRetryJob: vi.fn(),
   cancelPublicationJobs: vi.fn(),
+}));
+
+const publisherMocks = vi.hoisted(() => ({
+  publishPlatform: vi.fn(),
 }));
 
 vi.mock("../../db/prisma.js", () => ({
@@ -44,6 +49,20 @@ vi.mock("./publicationQueue.js", () => {
     cancelPublicationJobs: queueMocks.cancelPublicationJobs,
   };
 });
+
+vi.mock("./platformPublisher.js", () => ({
+  PlatformPublishError: class PlatformPublishError extends Error {
+    public readonly code: string;
+    public readonly rawResponse: unknown;
+
+    public constructor(code: string, message: string, rawResponse?: unknown) {
+      super(message);
+      this.code = code;
+      this.rawResponse = rawResponse;
+    }
+  },
+  publishPlatform: publisherMocks.publishPlatform,
+}));
 
 import {
   aggregatePublicationStatus,
@@ -91,6 +110,17 @@ describe("publicationService", () => {
     prismaMocks.publication.update.mockResolvedValue(buildPublication());
     prismaMocks.publication.delete.mockResolvedValue(buildPublication());
     prismaMocks.publicationResult.upsert.mockResolvedValue(undefined);
+    prismaMocks.publicationResult.update.mockResolvedValue(undefined);
+    publisherMocks.publishPlatform.mockResolvedValue({
+      outcome: "published",
+      externalId: "vk-video-id",
+      resultUrl: "https://vk.com/video1_2",
+      rawResponse: {
+        ok: true,
+      },
+      errorCode: null,
+      errorMessage: null,
+    });
   });
 
   it("creates scheduled publications and adds delayed jobs", async () => {
@@ -244,6 +274,43 @@ describe("publicationService", () => {
         }),
       }),
     );
+    expect(publisherMocks.publishPlatform).toHaveBeenCalledTimes(2);
+    expect(prismaMocks.publicationResult.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: PrismaPlatformResultStatus.PUBLISHED,
+          resultUrl: "https://vk.com/video1_2",
+        }),
+      }),
+    );
+  });
+
+  it("records failed platform publish attempts without failing the job", async () => {
+    prismaMocks.publication.findUnique.mockResolvedValue(
+      buildPublication({
+        platforms: [
+          {
+            platform: "vk",
+            enabled: true,
+          },
+        ],
+      }),
+    );
+    publisherMocks.publishPlatform.mockRejectedValueOnce(
+      new Error("VK publish failed"),
+    );
+
+    await processPublicationJob(publicationId);
+
+    expect(prismaMocks.publicationResult.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: PrismaPlatformResultStatus.FAILED,
+          errorCode: "PlatformPublishFailed",
+          errorMessage: "VK publish failed",
+        }),
+      }),
+    );
   });
 
   it("aggregates mixed platform results into partial status", async () => {
@@ -283,6 +350,64 @@ describe("publicationService", () => {
             resultUrl: null,
             errorCode: "VkError",
             errorMessage: "VK failed",
+            rawResponse: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
+      }),
+    );
+
+    const status = await aggregatePublicationStatus(publicationId);
+
+    expect(status).toBe("partial");
+    expect(prismaMocks.publication.update).toHaveBeenCalledWith({
+      where: {
+        id: publicationId,
+      },
+      data: {
+        status: PrismaPublicationStatus.PARTIAL,
+      },
+    });
+  });
+
+  it("aggregates published and skipped platform results into partial status", async () => {
+    prismaMocks.publication.findUnique.mockResolvedValue(
+      buildPublication({
+        platforms: [
+          {
+            platform: "youtube",
+            enabled: true,
+            title: "Video title",
+          },
+          {
+            platform: "vk",
+            enabled: true,
+          },
+        ],
+        results: [
+          {
+            id: "result-1",
+            publicationId,
+            platform: PrismaPlatform.YOUTUBE,
+            status: PrismaPlatformResultStatus.SKIPPED,
+            externalId: null,
+            resultUrl: null,
+            errorCode: "PlatformWorkerNotImplemented",
+            errorMessage: "Platform worker is not implemented yet",
+            rawResponse: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: "result-2",
+            publicationId,
+            platform: PrismaPlatform.VK,
+            status: PrismaPlatformResultStatus.PUBLISHED,
+            externalId: "vk-id",
+            resultUrl: "https://vk.com/video1_2",
+            errorCode: null,
+            errorMessage: null,
             rawResponse: null,
             createdAt: now,
             updatedAt: now,

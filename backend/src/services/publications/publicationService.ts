@@ -2,7 +2,7 @@ import {
   Platform as PrismaPlatform,
   PlatformResultStatus as PrismaPlatformResultStatus,
   PublicationStatus as PrismaPublicationStatus,
-  type Prisma,
+  Prisma,
 } from "@prisma/client";
 
 import { AppError } from "../../api/errors/AppError.js";
@@ -21,6 +21,10 @@ import {
   schedulePublicationJob,
   schedulePublicationRetryJob,
 } from "./publicationQueue.js";
+import {
+  publishPlatform,
+  PlatformPublishError,
+} from "./platformPublisher.js";
 import {
   publicationPlatformSchema,
   type CreatePublicationInput,
@@ -277,6 +281,130 @@ function serializeResult(
   };
 }
 
+function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+  if (value === undefined) {
+    return {};
+  }
+
+  return value as Prisma.InputJsonValue;
+}
+
+function normalizeResultError(error: unknown): {
+  errorCode: string;
+  errorMessage: string;
+  rawResponse: Prisma.InputJsonValue;
+} {
+  if (error instanceof PlatformPublishError) {
+    return {
+      errorCode: error.code,
+      errorMessage: error.message,
+      rawResponse: toPrismaJson(error.rawResponse),
+    };
+  }
+
+  if (error instanceof AppError) {
+    return {
+      errorCode: error.code,
+      errorMessage: error.message,
+      rawResponse: {},
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      errorCode: "PlatformPublishFailed",
+      errorMessage: error.message,
+      rawResponse: {},
+    };
+  }
+
+  return {
+    errorCode: "PlatformPublishFailed",
+    errorMessage: "Platform publish failed",
+    rawResponse: {},
+  };
+}
+
+async function publishPublicationPlatform(
+  publication: PublicationRecord,
+  platforms: PublicationPlatformInput[],
+  platform: Platform,
+): Promise<void> {
+  const prismaPlatform = PRISMA_PLATFORM_BY_API_PLATFORM[platform];
+
+  await prisma.publicationResult.upsert({
+    where: {
+      publicationId_platform: {
+        publicationId: publication.id,
+        platform: prismaPlatform,
+      },
+    },
+    create: {
+      publicationId: publication.id,
+      platform: prismaPlatform,
+      status: PrismaPlatformResultStatus.PUBLISHING,
+    },
+    update: {
+      status: PrismaPlatformResultStatus.PUBLISHING,
+      externalId: null,
+      resultUrl: null,
+      errorCode: null,
+      errorMessage: null,
+      rawResponse: Prisma.JsonNull,
+    },
+  });
+
+  try {
+    const result = await publishPlatform({
+      publicationId: publication.id,
+      userId: publication.userId,
+      videoR2Key: publication.videoR2Key,
+      defaultText: publication.defaultText,
+      platforms,
+      platform,
+    });
+
+    await prisma.publicationResult.update({
+      where: {
+        publicationId_platform: {
+          publicationId: publication.id,
+          platform: prismaPlatform,
+        },
+      },
+      data: {
+        status:
+          result.outcome === "published"
+            ? PrismaPlatformResultStatus.PUBLISHED
+            : PrismaPlatformResultStatus.SKIPPED,
+        externalId: result.externalId,
+        resultUrl: result.resultUrl,
+        errorCode: result.errorCode,
+        errorMessage: result.errorMessage,
+        rawResponse: toPrismaJson(result.rawResponse),
+      },
+    });
+  } catch (error) {
+    const resultError = normalizeResultError(error);
+
+    await prisma.publicationResult.update({
+      where: {
+        publicationId_platform: {
+          publicationId: publication.id,
+          platform: prismaPlatform,
+        },
+      },
+      data: {
+        status: PrismaPlatformResultStatus.FAILED,
+        externalId: null,
+        resultUrl: null,
+        errorCode: resultError.errorCode,
+        errorMessage: resultError.errorMessage,
+        rawResponse: resultError.rawResponse,
+      },
+    });
+  }
+}
+
 export function serializePublication(
   publication: PublicationRecord,
 ): PublicationResponse {
@@ -466,6 +594,7 @@ export async function processPublicationJob(
   }
 
   const enabledPlatforms = getEnabledPlatforms(publication.platforms);
+  const platformSettings = parseStoredPlatforms(publication.platforms);
 
   await prisma.publication.update({
     where: {
@@ -498,6 +627,14 @@ export async function processPublicationJob(
       }),
     ),
   );
+
+  await Promise.allSettled(
+    enabledPlatforms.map((platform) =>
+      publishPublicationPlatform(publication, platformSettings, platform),
+    ),
+  );
+
+  await aggregatePublicationStatus(publication.id);
 }
 
 export async function aggregatePublicationStatus(
@@ -524,6 +661,9 @@ export async function aggregatePublicationStatus(
   const hasFailedResult = relevantResults.some(
     (result) => result.status === PrismaPlatformResultStatus.FAILED,
   );
+  const hasSkippedResult = relevantResults.some(
+    (result) => result.status === PrismaPlatformResultStatus.SKIPPED,
+  );
   const allFinished =
     relevantResults.length === enabledPlatforms.length &&
     relevantResults.every(
@@ -535,11 +675,17 @@ export async function aggregatePublicationStatus(
 
   let nextStatus: PrismaPublicationStatus = PrismaPublicationStatus.PUBLISHING;
 
-  if (allFinished && hasPublishedResult && hasFailedResult) {
+  if (
+    allFinished &&
+    hasPublishedResult &&
+    (hasFailedResult || hasSkippedResult)
+  ) {
     nextStatus = PrismaPublicationStatus.PARTIAL;
   } else if (allFinished && hasPublishedResult) {
     nextStatus = PrismaPublicationStatus.PUBLISHED;
   } else if (allFinished && hasFailedResult) {
+    nextStatus = PrismaPublicationStatus.FAILED;
+  } else if (allFinished && hasSkippedResult) {
     nextStatus = PrismaPublicationStatus.FAILED;
   }
 

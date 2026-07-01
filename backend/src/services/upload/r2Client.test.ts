@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { S3Client } from "@aws-sdk/client-s3";
 
 type MockEnv = Record<string, string | undefined>;
 
@@ -45,5 +46,30 @@ describe("r2Client", () => {
       bucket: "videoflow-videos",
       publicUrl: "https://cdn.example.com",
     });
+  });
+
+  it("downloads object bodies as buffers", async () => {
+    const { getObjectBuffer } = await importR2ClientWithEnv({});
+    const send = vi.fn().mockResolvedValue({
+      Body: {
+        transformToByteArray: async () => new Uint8Array([1, 2, 3]),
+      },
+    });
+    const client = { send } as unknown as S3Client;
+
+    const buffer = await getObjectBuffer(client, "bucket", "key.mp4");
+
+    expect(buffer).toEqual(Buffer.from([1, 2, 3]));
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("returns null when downloaded object is missing", async () => {
+    const { getObjectBuffer } = await importR2ClientWithEnv({});
+    const send = vi.fn().mockRejectedValue({
+      name: "NotFound",
+    });
+    const client = { send } as unknown as S3Client;
+
+    await expect(getObjectBuffer(client, "bucket", "missing.mp4")).resolves.toBeNull();
   });
 });

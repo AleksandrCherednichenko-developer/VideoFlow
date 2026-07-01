@@ -1,19 +1,36 @@
 import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const backendRoot = path.resolve(currentDir, "../../");
+const projectRoot = path.resolve(backendRoot, "../");
+
 dotenv.config({
-  path: ["../.env", ".env"],
+  path: [
+    path.join(projectRoot, ".env"),
+    path.join(backendRoot, ".env"),
+  ],
 });
 
 const optionalUrlSchema = z.string().url().or(z.literal(""));
+const booleanFlagSchema = z
+  .enum(["true", "false"])
+  .default("false")
+  .transform((value) => value === "true");
 
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
   API_PORT: z.coerce.number().int().positive().default(3000),
+  API_HTTP_PORT: z.coerce.number().int().positive().optional(),
   API_HOST: z.string().min(1).default("127.0.0.1"),
+  API_HTTPS_ENABLED: booleanFlagSchema,
+  API_TLS_KEY_PATH: z.string().optional(),
+  API_TLS_CERT_PATH: z.string().optional(),
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
   BACKEND_URL: z.string().url().default("http://localhost:3000"),
   DATABASE_URL: z.string().min(1),
@@ -32,6 +49,12 @@ const envSchema = z.object({
   R2_SECRET_KEY: z.string().optional(),
   R2_BUCKET: z.string().optional(),
   R2_PUBLIC_URL: optionalUrlSchema.optional(),
+  YOUTUBE_CLIENT_ID: z.string().optional(),
+  YOUTUBE_CLIENT_SECRET: z.string().optional(),
+  YOUTUBE_REDIRECT_URL: optionalUrlSchema.optional(),
+  VK_APP_ID: z.string().optional(),
+  VK_APP_SECRET: z.string().optional(),
+  VK_REDIRECT_URL: optionalUrlSchema.optional(),
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
 });
