@@ -3,10 +3,23 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { clearSessionSnapshot, getAccessToken, setSessionSnapshot } from "./session";
 import type { AuthSessionResponse } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+}
+
+function shouldSkipRefresh(url: string | undefined): boolean {
+  if (url === undefined) {
+    return false;
+  }
+
+  return (
+    url.includes("/auth/login") ||
+    url.includes("/auth/register") ||
+    url.includes("/auth/logout") ||
+    url.includes("/auth/refresh")
+  );
 }
 
 export const httpClient = axios.create({
@@ -36,7 +49,7 @@ httpClient.interceptors.response.use(
       error.response?.status !== 401 ||
       originalRequest === undefined ||
       originalRequest._retry === true ||
-      originalRequest.url?.includes("/auth/refresh") === true
+      shouldSkipRefresh(originalRequest.url)
     ) {
       throw error;
     }

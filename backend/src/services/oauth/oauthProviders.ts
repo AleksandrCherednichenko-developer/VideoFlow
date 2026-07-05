@@ -43,6 +43,9 @@ interface VkTokenResponse {
   access_token?: string;
   expires_in?: number;
   user_id?: number;
+  error?: string;
+  error_description?: string;
+  error_reason?: string;
 }
 
 interface VkUsersResponse {
@@ -51,6 +54,10 @@ interface VkUsersResponse {
     first_name?: string;
     last_name?: string;
   }>;
+  error?: {
+    error_code?: number;
+    error_msg?: string;
+  };
 }
 
 function normalizeOptionalEnv(value: string | undefined): string | null {
@@ -105,6 +112,62 @@ async function readJsonResponse(response: Response): Promise<unknown> {
       "OAuthProviderRequestFailed",
       "OAuth provider request failed",
     );
+  }
+
+  return responseBody;
+}
+
+function getVkErrorMessage(value: unknown): string | null {
+  if (!isObject(value)) {
+    return null;
+  }
+
+  if (typeof value.error_description === "string" && value.error_description.length > 0) {
+    return value.error_description;
+  }
+
+  if (
+    "error" in value &&
+    isObject(value.error) &&
+    typeof value.error.error_msg === "string" &&
+    value.error.error_msg.length > 0
+  ) {
+    return value.error.error_msg;
+  }
+
+  if (typeof value.error_reason === "string" && value.error_reason.length > 0) {
+    return value.error_reason;
+  }
+
+  if (typeof value.error === "string" && value.error.length > 0) {
+    return value.error;
+  }
+
+  return null;
+}
+
+function throwVkProviderError(value: unknown, fallbackMessage: string): never {
+  throw new AppError(
+    502,
+    "OAuthProviderRejected",
+    getVkErrorMessage(value) ?? fallbackMessage,
+  );
+}
+
+async function readVkJsonResponse(
+  response: Response,
+  fallbackMessage: string,
+): Promise<unknown> {
+  const responseBody = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throwVkProviderError(responseBody, fallbackMessage);
+  }
+
+  const vkErrorMessage = getVkErrorMessage(responseBody);
+
+  if (vkErrorMessage !== null) {
+    throw new AppError(502, "OAuthProviderRejected", vkErrorMessage);
   }
 
   return responseBody;
@@ -305,7 +368,10 @@ export const vkProvider: OAuthProvider = {
     url.searchParams.set("code", code);
 
     const response = await fetch(url);
-    const responseBody = await readJsonResponse(response);
+    const responseBody = await readVkJsonResponse(
+      response,
+      "VK OAuth token exchange failed",
+    );
     const accessToken = getRequiredToken(responseBody);
     const tokenResponse = responseBody as VkTokenResponse;
 
@@ -334,7 +400,10 @@ export const vkProvider: OAuthProvider = {
     url.searchParams.set("v", "5.199");
 
     const response = await fetch(url);
-    const responseBody = await readJsonResponse(response);
+    const responseBody = await readVkJsonResponse(
+      response,
+      "VK account profile request failed",
+    );
     const user = (responseBody as VkUsersResponse).response?.[0];
     const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ");
 
