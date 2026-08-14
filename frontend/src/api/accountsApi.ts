@@ -32,6 +32,11 @@ export interface StartOAuthResponse {
   authorizationUrl: string;
 }
 
+export interface ConnectVkCommunityInput {
+  groupId: string;
+  accessToken: string;
+}
+
 export async function listAccounts(): Promise<ListAccountsResponse> {
   const response = await httpClient.get<ListAccountsResponse>("/accounts");
 
@@ -43,6 +48,17 @@ export async function startOAuth(
 ): Promise<StartOAuthResponse> {
   const response = await httpClient.get<StartOAuthResponse>(
     `/oauth/${platform}/start`,
+  );
+
+  return response.data;
+}
+
+export async function connectVkCommunity(
+  input: ConnectVkCommunityInput,
+): Promise<AccountResponse> {
+  const response = await httpClient.post<AccountResponse>(
+    "/accounts/vk/connect",
+    input,
   );
 
   return response.data;

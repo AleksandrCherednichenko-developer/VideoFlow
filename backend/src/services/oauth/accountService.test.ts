@@ -38,8 +38,8 @@ vi.mock("./oauthState.js", () => ({
 
 vi.mock("./oauthProviders.js", () => ({
   getOAuthProvider: vi.fn(() => ({
-    platform: "vk",
-    displayName: "VK",
+    platform: "youtube",
+    displayName: "YouTube",
     isConfigured: providerMocks.isConfigured,
     buildAuthorizationUrl: providerMocks.buildAuthorizationUrl,
     exchangeCode: providerMocks.exchangeCode,
@@ -47,9 +47,23 @@ vi.mock("./oauthProviders.js", () => ({
   })),
 }));
 
+vi.mock("../../platforms/vk/vkClient.js", () => ({
+  getGroupById: vi.fn(),
+  VkApiError: class VkApiError extends Error {
+    public readonly code: string;
+
+    public constructor(code: string, message: string) {
+      super(message);
+      this.code = code;
+    }
+  },
+}));
+
 import { PLATFORM } from "../../config/constants.js";
+import { getGroupById, VkApiError } from "../../platforms/vk/vkClient.js";
 import {
   completeOAuthCallback,
+  connectVkCommunityAccount,
   disconnectAccount,
   getActivePlatformAccountSecret,
   listAccounts,
@@ -106,7 +120,7 @@ describe("accountService", () => {
   });
 
   it("starts OAuth with a signed state", () => {
-    const result = startOAuth(userId, PLATFORM.VK);
+    const result = startOAuth(userId, PLATFORM.YOUTUBE);
 
     expect(providerMocks.buildAuthorizationUrl).toHaveBeenCalledWith("signed-state");
     expect(result.authorizationUrl).toBe("https://oauth.example/authorize");
@@ -115,20 +129,24 @@ describe("accountService", () => {
   it("rejects unconfigured providers", () => {
     providerMocks.isConfigured.mockReturnValue(false);
 
-    expect(() => startOAuth(userId, PLATFORM.VK)).toThrow(
-      "VK OAuth is not configured",
+    expect(() => startOAuth(userId, PLATFORM.YOUTUBE)).toThrow(
+      "YouTube OAuth is not configured",
     );
   });
 
   it("exchanges code and upserts encrypted account tokens", async () => {
-    const result = await completeOAuthCallback(PLATFORM.VK, "code", "state");
+    const result = await completeOAuthCallback(
+      PLATFORM.YOUTUBE,
+      "code",
+      "state",
+    );
 
     expect(prismaMocks.platformAccount.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           userId_platform: {
             userId,
-            platform: PrismaPlatform.VK,
+            platform: PrismaPlatform.YOUTUBE,
           },
         },
         create: expect.objectContaining({
@@ -226,5 +244,56 @@ describe("accountService", () => {
     });
 
     vi.useRealTimers();
+  });
+
+  it("connects VK community accounts after validating the token", async () => {
+    vi.mocked(getGroupById).mockResolvedValueOnce({
+      id: 12345,
+      name: "Test Community",
+      screenName: "testcommunity",
+      rawResponse: { response: [{ id: 12345, name: "Test Community" }] },
+    });
+    prismaMocks.platformAccount.upsert.mockResolvedValueOnce(
+      buildAccount({
+        externalAccountId: "12345",
+        externalAccountName: "Test Community",
+      }),
+    );
+
+    const result = await connectVkCommunityAccount(
+      userId,
+      "12345",
+      "vk-community-token",
+    );
+
+    expect(getGroupById).toHaveBeenCalledWith("vk-community-token", "12345");
+    expect(prismaMocks.platformAccount.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          externalAccountId: "12345",
+          externalAccountName: "Test Community",
+          accessTokenEncrypted: "encrypted:vk-community-token",
+          refreshTokenEncrypted: null,
+          expiresAt: null,
+        }),
+      }),
+    );
+    expect(result).toMatchObject({
+      platform: PLATFORM.VK,
+      externalAccountId: "12345",
+      externalAccountName: "Test Community",
+    });
+  });
+
+  it("rejects invalid VK community tokens", async () => {
+    vi.mocked(getGroupById).mockRejectedValueOnce(
+      new VkApiError("VkGroupLookupFailed", "Access denied"),
+    );
+
+    await expect(
+      connectVkCommunityAccount(userId, "12345", "bad-token"),
+    ).rejects.toMatchObject({
+      code: "VkCommunityTokenInvalid",
+    });
   });
 });

@@ -1,89 +1,110 @@
 # VideoFlow
 
-VideoFlow is a Progressive Web App for scheduling one video publication across multiple social platforms. The project starts with an MVP for YouTube and VK, then expands to Instagram, Threads, TikTok, Pinterest, push notifications, templates, teams, and billing.
+VideoFlow — PWA-сервис для подготовки, планирования и автоматической публикации
+коротких вертикальных видео в несколько социальных сетей. Пользователь загружает
+видео один раз, задаёт отдельные описания и время, а backend публикует контент
+независимо от состояния телефона или браузера.
 
-## Stack
+Проект развивается в двух горизонтах:
 
-- Frontend: React, Vite, PWA, Tailwind CSS, shadcn/ui
+- сначала — быстрый PWA-first продукт для одного креатора;
+- затем — коммерческий SaaS с рабочими пространствами, тарифами, лимитами и
+  командной работой.
+
+Исходное ТЗ DiPost используется как источник продуктовых пожеланий, но не как
+неизменяемый контракт. Возможности платформ включаются только после проверки
+официальных API, разрешений, review-процессов и реального end-to-end publish.
+
+## Текущий статус
+
+В репозитории уже реализованы:
+
+- React/Vite PWA с адаптивным интерфейсом;
+- email/password authentication и refresh-сессии;
+- загрузка видео напрямую в Cloudflare R2;
+- Publications API;
+- PostgreSQL/Prisma;
+- Redis/BullMQ scheduler и worker;
+- статусы публикаций, retry и частичный успех;
+- история, расписание и экран подключённых аккаунтов;
+- экспериментальная VK-интеграция.
+
+Текущий VK flow не определяет новый MVP: VK переведён в отложенный трек из-за
+ограничений официального API. Главные кандидаты следующего этапа — Instagram
+Reels, TikTok и YouTube Shorts, но каждый проходит отдельный feasibility gate.
+
+## Продуктовые принципы
+
+1. **PWA-first, не PWA-only.** Быстро используем готовый web-клиент. Нативный
+   iOS-клиент рассматривается позже, если ограничения PWA мешают продуктовым
+   метрикам.
+2. **Server-side publishing.** Все отложенные публикации выполняет backend worker.
+3. **Official APIs only.** Не используем браузерную автоматизацию и не обходим
+   ограничения социальных платформ.
+4. **Capability-aware UX.** Интерфейс показывает только реально поддерживаемые
+   конкретной платформой поля, метрики и действия.
+5. **SaaS-ready domain.** MVP остаётся простым, но новые сущности проектируются с
+   границами workspace, тарифов и лимитов.
+6. **Security before integrations.** OAuth-секреты не попадают в клиент, логи и
+   незашифрованные поля базы.
+
+## Стек
+
+- Frontend: React 18, Vite, TypeScript, PWA, Tailwind CSS
 - Backend: Node.js 20, Express, TypeScript
 - Data: PostgreSQL 16, Prisma
 - Queue: Redis 7, BullMQ
-- File storage: Cloudflare R2
-- Deployment: Docker Compose, Nginx, Let's Encrypt
-- Notifications: PWA Push, in-app status, email fallback
+- Media storage: Cloudflare R2
+- Deployment: Docker Compose, Nginx, HTTPS
+- Notifications: in-app status, Web Push; email fallback — продуктовая опция
 
-## Repository Layout
+## Структура репозитория
 
 ```text
 frontend/       React + Vite PWA
-backend/        Express API, workers, platform integrations
-infrastructure/ Docker Compose, Nginx, deployment assets
-docs/           Product and technical documentation
-.local/         Ignored local plans and private working notes
+backend/        REST API, application services, workers, platform adapters
+infrastructure/ Docker Compose and deployment assets
+docs/           Current product and architecture documentation
+.local/         Ignored historical plans and private working notes
 ```
 
-## Local Start
-
-Stage 0 provides infrastructure only. Application services are implemented in later WBS stages.
+## Локальный запуск
 
 ```bash
 cp .env.example .env
 pnpm install
 docker compose -f infrastructure/docker-compose.yml up -d postgres redis
-docker compose -f infrastructure/docker-compose.yml ps
-```
-
-PostgreSQL is exposed on `localhost:5433` by default to avoid conflicts with a system PostgreSQL running on `5432`.
-
-When backend and frontend packages are added:
-
-```bash
+pnpm --filter @videoflow/backend prisma:generate
+pnpm --filter @videoflow/backend prisma:deploy
 pnpm dev
 ```
 
-## Upload API (Cloudflare R2)
+По умолчанию:
 
-Authenticated endpoints for direct browser-to-R2 video upload:
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:3000`
+- PostgreSQL: `localhost:5433`
+- Redis: `localhost:6379`
 
-- `POST /uploads/presign` — returns `videoR2Key`, `uploadUrl`, `expiresAt`, and required upload headers
-- `POST /uploads/complete` — verifies the uploaded object exists in R2
-
-Configure R2 credentials in `.env`:
-
-- `R2_ACCOUNT_ID`
-- `R2_ACCESS_KEY`
-- `R2_SECRET_KEY`
-- `R2_BUCKET`
-- `R2_PUBLIC_URL` (optional, required later for Instagram/Threads)
-
-Manual verification flow:
+Для worker в отдельном терминале:
 
 ```bash
-# 1. Register or login and save accessToken
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
-
-# 2. Request presigned upload URL
-curl -X POST http://localhost:3000/uploads/presign \
-  -H "Authorization: Bearer <accessToken>" \
-  -H "Content-Type: application/json" \
-  -d '{"filename":"clip.mp4","contentType":"video/mp4","sizeBytes":123456}'
-
-# 3. Upload the file directly to R2
-curl -X PUT "<uploadUrl>" \
-  -H "Content-Type: video/mp4" \
-  --data-binary @clip.mp4
-
-# 4. Confirm upload in backend
-curl -X POST http://localhost:3000/uploads/complete \
-  -H "Authorization: Bearer <accessToken>" \
-  -H "Content-Type: application/json" \
-  -d '{"videoR2Key":"<videoR2Key>"}'
+pnpm --filter @videoflow/backend worker:dev
 ```
 
-## Documentation
+## Проверки
 
-- Technical documentation: [docs/VideoFlow_Technical_Documentation.md](docs/VideoFlow_Technical_Documentation.md)
-- Architecture decision: [docs/adr/0001-architecture.md](docs/adr/0001-architecture.md)
-- Roadmap: [docs/roadmap.md](docs/roadmap.md)
+```bash
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+## Документация
+
+- [Продуктовые требования](docs/product-requirements.md)
+- [Целевая архитектура](docs/architecture.md)
+- [Roadmap](docs/roadmap.md)
+- [Platform feasibility gates](docs/platform-feasibility.md)
+- [ADR 0001: исходная архитектура](docs/adr/0001-architecture.md)
+- [ADR 0002: PWA-first и SaaS-ready направление](docs/adr/0002-pwa-first-saas-ready.md)

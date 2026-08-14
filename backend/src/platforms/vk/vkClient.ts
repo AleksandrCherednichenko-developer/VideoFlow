@@ -30,8 +30,15 @@ export interface VkUploadVideoResult {
 export interface VkCreateWallPostInput {
   accessToken: string;
   ownerId: number;
-  videoId: number;
   message: string;
+  videoId?: number;
+}
+
+export interface VkGroupInfo {
+  id: number;
+  name: string;
+  screenName: string | null;
+  rawResponse: unknown;
 }
 
 export interface VkCreateWallPostResult {
@@ -134,6 +141,10 @@ export function buildVkVideoUrl(ownerId: number, videoId: number): string {
   return `https://vk.com/video${ownerId}_${videoId}`;
 }
 
+export function buildVkWallPostUrl(groupId: number, postId: number): string {
+  return `https://vk.com/wall-${groupId}_${postId}`;
+}
+
 export function buildVkVideoAttachment(ownerId: number, videoId: number): string {
   return `video${ownerId}_${videoId}`;
 }
@@ -183,15 +194,71 @@ export async function uploadVideo(
   };
 }
 
+export async function getGroupById(
+  accessToken: string,
+  groupId: string,
+): Promise<VkGroupInfo> {
+  const body = new URLSearchParams({
+    access_token: accessToken,
+    v: VK_API_VERSION,
+    group_id: groupId,
+  });
+  const response = await fetch(`${VK_API_BASE_URL}/groups.getById`, {
+    method: "POST",
+    body,
+  });
+  const responseBody = await readJson(response, "VkGroupLookupFailed");
+  const payload = getVkResponseObject(responseBody, "VkGroupLookupFailed");
+
+  if (!Array.isArray(payload) || payload.length === 0) {
+    throw new VkApiError(
+      "VkGroupLookupFailed",
+      "VK group lookup returned no groups",
+      responseBody,
+    );
+  }
+
+  const group = payload[0];
+
+  if (!isObject(group)) {
+    throw new VkApiError(
+      "VkGroupLookupFailed",
+      "VK group lookup returned an invalid group",
+      responseBody,
+    );
+  }
+
+  const id = readNumberField(group, "id");
+  const name = readStringField(group, "name");
+  const screenNameValue = group.screen_name;
+
+  return {
+    id,
+    name,
+    screenName:
+      typeof screenNameValue === "string" && screenNameValue.length > 0
+        ? screenNameValue
+        : null,
+    rawResponse: responseBody,
+  };
+}
+
 export async function createWallPost(
   input: VkCreateWallPostInput,
 ): Promise<VkCreateWallPostResult> {
   const body = new URLSearchParams({
     access_token: input.accessToken,
     v: VK_API_VERSION,
+    owner_id: input.ownerId.toString(),
     message: input.message,
-    attachments: buildVkVideoAttachment(input.ownerId, input.videoId),
   });
+
+  if (input.videoId !== undefined) {
+    body.set(
+      "attachments",
+      buildVkVideoAttachment(input.ownerId, input.videoId),
+    );
+  }
   const response = await fetch(`${VK_API_BASE_URL}/wall.post`, {
     method: "POST",
     body,

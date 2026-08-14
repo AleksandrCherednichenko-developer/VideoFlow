@@ -3,10 +3,17 @@ import { z } from "zod";
 import { PLATFORM } from "../../config/constants.js";
 
 export const oauthPlatformParamsSchema = z.object({
+  platform: z.enum([PLATFORM.YOUTUBE]),
+});
+
+export const accountPlatformParamsSchema = z.object({
   platform: z.enum([PLATFORM.YOUTUBE, PLATFORM.VK]),
 });
 
-export const accountPlatformParamsSchema = oauthPlatformParamsSchema;
+export const vkConnectBodySchema = z.object({
+  groupId: z.string().min(1),
+  accessToken: z.string().min(1),
+});
 
 export const oauthCallbackQuerySchema = z.object({
   code: z.string().min(1).optional(),
@@ -15,4 +22,6 @@ export const oauthCallbackQuerySchema = z.object({
 });
 
 export type OAuthPlatformParams = z.infer<typeof oauthPlatformParamsSchema>;
+export type AccountPlatformParams = z.infer<typeof accountPlatformParamsSchema>;
 export type OAuthCallbackQuery = z.infer<typeof oauthCallbackQuerySchema>;
+export type VkConnectBody = z.infer<typeof vkConnectBodySchema>;

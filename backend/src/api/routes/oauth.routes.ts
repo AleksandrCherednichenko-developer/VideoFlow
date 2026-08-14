@@ -7,9 +7,11 @@ import {
   accountPlatformParamsSchema,
   oauthCallbackQuerySchema,
   oauthPlatformParamsSchema,
+  vkConnectBodySchema,
 } from "../../services/oauth/oauthSchemas.js";
 import {
   completeOAuthCallback,
+  connectVkCommunityAccount,
   disconnectAccount,
   listAccounts,
   startOAuth,
@@ -107,6 +109,22 @@ oauthRouter.get("/accounts", authenticate, async (req, res, next) => {
     res.json({
       accounts,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+oauthRouter.post("/accounts/vk/connect", authenticate, async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const body = vkConnectBodySchema.parse(req.body);
+    const account = await connectVkCommunityAccount(
+      userId,
+      body.groupId,
+      body.accessToken,
+    );
+
+    res.status(200).json(account);
   } catch (error) {
     next(error);
   }

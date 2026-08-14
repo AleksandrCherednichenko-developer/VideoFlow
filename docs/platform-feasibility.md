@@ -1,0 +1,146 @@
+# Platform Feasibility Gates
+
+**Последняя актуализация:** 27 июля 2026
+
+Этот документ предотвращает реализацию интеграции на основании устаревшего или
+неполного представления об API. Сведения об API меняются; перед каждым gate
+проверяется актуальная официальная документация.
+
+## Общий gate
+
+Платформа считается доступной для MVP только если подтверждены:
+
+- официальный publishing API для нужного формата;
+- допустимый тип аккаунта заказчика;
+- developer app и redirect URLs;
+- необходимые OAuth scopes;
+- возможность получить/обновить token server-side;
+- публичная, а не только private/test публикация;
+- автоматическая или отложенная публикация не нарушает правила API;
+- media transfer с R2 или server upload;
+- final status, external ID и URL;
+- quota для ожидаемого объёма;
+- review/audit процесс и реалистичный срок;
+- доступные analytics;
+- live publish на тестовом аккаунте.
+
+Результат gate: `supported`, `supported_with_limits`, `blocked` или
+`requires_review`.
+
+## Instagram Reels
+
+### Рабочая гипотеза
+
+- Professional Creator/Business account;
+- Reels publishing через Instagram API;
+- media container получает доступный video URL из R2;
+- backend проверяет container status и выполняет publish;
+- analytics зависят от permissions и доступных insights.
+
+### Gate checklist
+
+- [ ] Уточнить Facebook Login или Instagram Login flow.
+- [ ] Подтвердить требования к linked Facebook Page для выбранного flow.
+- [ ] Создать Meta app и test roles.
+- [ ] Получить publishing и insights permissions.
+- [ ] Подключить реальный professional account.
+- [ ] Опубликовать Reel из R2.
+- [ ] Проверить processing polling и ошибки container.
+- [ ] Получить permalink и доступные metrics.
+- [ ] Зафиксировать App Review requirements.
+
+Official starting point:
+<https://developers.facebook.com/docs/instagram-platform/content-publishing/>
+
+## TikTok
+
+### Рабочая гипотеза
+
+TikTok — интеграция с самым высоким release risk:
+
+- требуется Content Posting API;
+- scope `video.publish` должен быть одобрен;
+- unaudited client может публиковать только с ограниченной visibility;
+- posting UX должен соответствовать требованиям TikTok;
+- `PULL_FROM_URL` требует подтверждённого домена.
+
+### Gate checklist
+
+- [ ] Создать TikTok developer app.
+- [ ] Подтвердить eligibility аккаунта заказчика.
+- [ ] Получить Login Kit и `video.publish`.
+- [ ] Реализовать Query Creator Info в обязательном UX.
+- [ ] Проверить explicit-consent требования для scheduled flow.
+- [ ] Подтвердить домен R2 для `PULL_FROM_URL` либо проверить file upload.
+- [ ] Выполнить private test publish.
+- [ ] Описать audit path для public visibility.
+- [ ] Проверить publish status polling/webhook.
+- [ ] Проверить доступные metrics и daily posting caps.
+
+Official starting points:
+
+- <https://developers.tiktok.com/doc/content-posting-api-get-started/>
+- <https://developers.tiktok.com/doc/content-posting-api-reference-direct-post/>
+- <https://developers.tiktok.com/doc/content-sharing-guidelines/>
+
+## YouTube Shorts
+
+### Рабочая гипотеза
+
+- OAuth 2.0 server-side flow;
+- `youtube.upload` scope;
+- resumable `videos.insert`;
+- title и description передаются из publication target;
+- Shorts определяется YouTube по параметрам контента, а не отдельным upload API;
+- processing status проверяется после загрузки.
+
+### Gate checklist
+
+- [ ] Создать Google Cloud project.
+- [ ] Включить YouTube Data API v3.
+- [ ] Настроить OAuth consent screen и redirect URL.
+- [ ] Проверить refresh token lifecycle.
+- [ ] Выполнить resumable upload.
+- [ ] Проверить public/unlisted visibility.
+- [ ] Зафиксировать OAuth verification и API audit requirements.
+- [ ] Проверить quota на ожидаемый объём.
+- [ ] Получить video URL и processing status.
+- [ ] Получить доступные statistics.
+
+Official starting points:
+
+- <https://developers.google.com/youtube/v3/guides/uploading_a_video>
+- <https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol>
+- <https://developers.google.com/youtube/v3/docs/videos>
+
+## VK
+
+### Текущее решение
+
+Интеграция исключена из ближайшего MVP. Существующий community-token/link-post
+flow сохраняется как эксперимент и историческая реализация, но не считается
+эквивалентом VK Clips publishing.
+
+Возврат в roadmap возможен после подтверждения официального video/Clips API,
+доступных permissions и live publish.
+
+## Gate report template
+
+```md
+Platform:
+Date:
+Developer app:
+Test account:
+Required scopes:
+Review/audit status:
+Publish mode:
+Public visibility:
+Media transfer:
+Rate/quota limits:
+Analytics:
+Known restrictions:
+Live test evidence:
+Decision:
+Recheck date:
+```
+

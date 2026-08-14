@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const serviceMocks = vi.hoisted(() => ({
   startOAuth: vi.fn(),
   completeOAuthCallback: vi.fn(),
+  connectVkCommunityAccount: vi.fn(),
   listAccounts: vi.fn(),
   disconnectAccount: vi.fn(),
 }));
@@ -32,12 +33,23 @@ describe("oauth routes", () => {
     serviceMocks.completeOAuthCallback.mockResolvedValue({
       id: "account-id",
     });
+    serviceMocks.connectVkCommunityAccount.mockResolvedValue({
+      id: "account-id",
+      platform: "vk",
+      externalAccountId: "12345",
+      externalAccountName: "Test Community",
+      expiresAt: null,
+      isExpired: false,
+      isActive: true,
+      createdAt: "2026-06-30T10:00:00.000Z",
+      updatedAt: "2026-06-30T10:00:00.000Z",
+    });
     serviceMocks.listAccounts.mockResolvedValue([
       {
         id: "account-id",
         platform: "vk",
-        externalAccountId: "vk-user-id",
-        externalAccountName: "VK User",
+        externalAccountId: "12345",
+        externalAccountName: "Test Community",
         expiresAt: null,
         isExpired: false,
         isActive: true,
@@ -49,20 +61,20 @@ describe("oauth routes", () => {
   });
 
   it("starts OAuth for authenticated users", async () => {
-    const response = await request(app).get("/oauth/vk/start").expect(200);
+    const response = await request(app).get("/oauth/youtube/start").expect(200);
 
     expect(response.body).toEqual({
       authorizationUrl: "https://oauth.example/authorize",
     });
     expect(serviceMocks.startOAuth).toHaveBeenCalledWith(
       "11111111-1111-4111-8111-111111111111",
-      "vk",
+      "youtube",
     );
   });
 
   it("redirects callback success to accounts", async () => {
     const response = await request(app)
-      .get("/oauth/vk/callback")
+      .get("/oauth/youtube/callback")
       .query({
         code: "code",
         state: "state",
@@ -70,26 +82,56 @@ describe("oauth routes", () => {
       .expect(302);
 
     expect(serviceMocks.completeOAuthCallback).toHaveBeenCalledWith(
-      "vk",
+      "youtube",
       "code",
       "state",
     );
     expect(response.headers.location).toBe(
-      "http://localhost:5173/accounts?oauth=connected&platform=vk",
+      "http://localhost:5173/accounts?oauth=connected&platform=youtube",
     );
   });
 
   it("redirects callback provider errors to accounts", async () => {
     const response = await request(app)
-      .get("/oauth/vk/callback")
+      .get("/oauth/youtube/callback")
       .query({
         error: "access_denied",
       })
       .expect(302);
 
     expect(response.headers.location).toBe(
-      "http://localhost:5173/accounts?oauth=error&platform=vk&code=access_denied",
+      "http://localhost:5173/accounts?oauth=error&platform=youtube&code=access_denied",
     );
+  });
+
+  it("connects VK community accounts for authenticated users", async () => {
+    const response = await request(app)
+      .post("/accounts/vk/connect")
+      .send({
+        groupId: "12345",
+        accessToken: "vk-community-token",
+      })
+      .expect(200);
+
+    expect(serviceMocks.connectVkCommunityAccount).toHaveBeenCalledWith(
+      "11111111-1111-4111-8111-111111111111",
+      "12345",
+      "vk-community-token",
+    );
+    expect(response.body).toMatchObject({
+      platform: "vk",
+      externalAccountId: "12345",
+    });
+  });
+
+  it("rejects invalid VK community connect payloads", async () => {
+    await request(app)
+      .post("/accounts/vk/connect")
+      .send({
+        groupId: "",
+        accessToken: "vk-community-token",
+      })
+      .expect(400);
   });
 
   it("lists accounts for the current user", async () => {
@@ -111,6 +153,7 @@ describe("oauth routes", () => {
   });
 
   it("rejects unsupported OAuth platforms", async () => {
+    await request(app).get("/oauth/vk/start").expect(400);
     await request(app).get("/oauth/instagram/start").expect(400);
   });
 });

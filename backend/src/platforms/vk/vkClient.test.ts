@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildVkVideoAttachment,
   buildVkVideoUrl,
+  buildVkWallPostUrl,
   createWallPost,
+  getGroupById,
   saveVideo,
   uploadVideo,
 } from "./vkClient.js";
@@ -20,6 +22,35 @@ describe("vkClient", () => {
   it("builds stable VK video identifiers and URLs", () => {
     expect(buildVkVideoAttachment(123, 456)).toBe("video123_456");
     expect(buildVkVideoUrl(123, 456)).toBe("https://vk.com/video123_456");
+    expect(buildVkWallPostUrl(12345, 789)).toBe("https://vk.com/wall-12345_789");
+  });
+
+  it("looks up VK communities by group ID", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          response: [
+            {
+              id: 12345,
+              name: "Test Community",
+              screen_name: "testcommunity",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await getGroupById("vk-token", "12345");
+    const [, init] = vi.mocked(fetch).mock.calls[0] ?? [];
+    const body = init?.body as URLSearchParams;
+
+    expect(result).toMatchObject({
+      id: 12345,
+      name: "Test Community",
+      screenName: "testcommunity",
+    });
+    expect(body.get("group_id")).toBe("12345");
+    expect(body.get("access_token")).toBe("vk-token");
   });
 
   it("calls video.save and parses upload metadata", async () => {
@@ -100,6 +131,30 @@ describe("vkClient", () => {
     expect(result.postId).toBe(789);
     expect(body.get("attachments")).toBe("video123_456");
     expect(body.get("message")).toBe("Post message");
+    expect(body.get("owner_id")).toBe("123");
+  });
+
+  it("creates link-only wall posts without attachments", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          response: {
+            post_id: 321,
+          },
+        }),
+      ),
+    );
+
+    await createWallPost({
+      accessToken: "vk-token",
+      ownerId: -12345,
+      message: "Post message\n\nhttps://video.example.com/clip.mp4",
+    });
+    const [, init] = vi.mocked(fetch).mock.calls[0] ?? [];
+    const body = init?.body as URLSearchParams;
+
+    expect(body.get("attachments")).toBeNull();
+    expect(body.get("owner_id")).toBe("-12345");
   });
 
   it("maps VK JSON errors into typed failures", async () => {

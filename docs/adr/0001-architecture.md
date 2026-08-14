@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted.
+Superseded by [ADR 0002](0002-pwa-first-saas-ready.md).
+
+This ADR is retained as a historical record of the initial architecture.
 
 ## Context
 

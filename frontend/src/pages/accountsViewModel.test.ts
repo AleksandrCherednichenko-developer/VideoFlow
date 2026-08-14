@@ -5,7 +5,9 @@ import {
   type AccountResponse,
 } from "../api/accountsApi";
 import {
+  ACCOUNT_CONNECTION_METHOD,
   buildAccountPlatformCards,
+  getAccountConnectionMethod,
   getAccountPlatformLabel,
   isAccountPlatformConnectable,
 } from "./accountsViewModel";
@@ -26,10 +28,16 @@ function buildAccount(overrides: Partial<AccountResponse>): AccountResponse {
 }
 
 describe("accountsViewModel", () => {
-  it("marks only MVP OAuth platforms as connectable", () => {
+  it("marks only MVP connectable platforms with the right connection method", () => {
     expect(isAccountPlatformConnectable(ACCOUNT_PLATFORM.VK)).toBe(true);
     expect(isAccountPlatformConnectable(ACCOUNT_PLATFORM.YOUTUBE)).toBe(true);
     expect(isAccountPlatformConnectable(ACCOUNT_PLATFORM.INSTAGRAM)).toBe(false);
+    expect(getAccountConnectionMethod(ACCOUNT_PLATFORM.VK)).toBe(
+      ACCOUNT_CONNECTION_METHOD.MANUAL_VK,
+    );
+    expect(getAccountConnectionMethod(ACCOUNT_PLATFORM.YOUTUBE)).toBe(
+      ACCOUNT_CONNECTION_METHOD.OAUTH,
+    );
   });
 
   it("builds connected and coming-later cards", () => {
@@ -46,6 +54,7 @@ describe("accountsViewModel", () => {
     expect(vkCard).toMatchObject({
       label: "VK",
       isConnectable: true,
+      connectionMethod: ACCOUNT_CONNECTION_METHOD.MANUAL_VK,
       account: expect.objectContaining({
         externalAccountName: "External Account",
       }),

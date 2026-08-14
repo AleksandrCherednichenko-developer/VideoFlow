@@ -9,6 +9,14 @@ export const CONNECTABLE_ACCOUNT_PLATFORMS = [
   ACCOUNT_PLATFORM.YOUTUBE,
 ] as const;
 
+export const ACCOUNT_CONNECTION_METHOD = {
+  OAUTH: "oauth",
+  MANUAL_VK: "manual-vk",
+} as const;
+
+export type AccountConnectionMethod =
+  (typeof ACCOUNT_CONNECTION_METHOD)[keyof typeof ACCOUNT_CONNECTION_METHOD];
+
 export const ACCOUNT_PLATFORM_LIST = [
   ACCOUNT_PLATFORM.VK,
   ACCOUNT_PLATFORM.YOUTUBE,
@@ -22,7 +30,22 @@ export interface AccountPlatformCard {
   platform: AccountPlatform;
   label: string;
   isConnectable: boolean;
+  connectionMethod: AccountConnectionMethod | null;
   account: AccountResponse | null;
+}
+
+export function getAccountConnectionMethod(
+  platform: AccountPlatform,
+): AccountConnectionMethod | null {
+  if (!isAccountPlatformConnectable(platform)) {
+    return null;
+  }
+
+  if (platform === ACCOUNT_PLATFORM.VK) {
+    return ACCOUNT_CONNECTION_METHOD.MANUAL_VK;
+  }
+
+  return ACCOUNT_CONNECTION_METHOD.OAUTH;
 }
 
 export function getAccountPlatformLabel(platform: AccountPlatform): string {
@@ -53,6 +76,7 @@ export function buildAccountPlatformCards(
     platform,
     label: getAccountPlatformLabel(platform),
     isConnectable: isAccountPlatformConnectable(platform),
+    connectionMethod: getAccountConnectionMethod(platform),
     account:
       accounts.find((account) => account.platform === platform && account.isActive) ??
       null,

@@ -32,3 +32,4 @@ backend/certs/*.pem
 # IDE
 .idea/
 .vscode/
+.cursor/

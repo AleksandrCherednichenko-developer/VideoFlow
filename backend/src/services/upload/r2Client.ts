@@ -94,6 +94,8 @@ export function buildPublicUrl(config: R2Config, key: string): string | undefine
   return `${config.publicUrl}/${key}`;
 }
 
+export const PRESIGNED_GET_URL_MAX_EXPIRES_SECONDS = 7 * 24 * 60 * 60;
+
 export async function createPresignedPutUrl(
   client: S3Client,
   bucket: string,
@@ -105,6 +107,20 @@ export async function createPresignedPutUrl(
     Bucket: bucket,
     Key: key,
     ContentType: contentType,
+  });
+
+  return getSignedUrl(client, command, { expiresIn });
+}
+
+export async function createPresignedGetUrl(
+  client: S3Client,
+  bucket: string,
+  key: string,
+  expiresIn: number,
+): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
   });
 
   return getSignedUrl(client, command, { expiresIn });

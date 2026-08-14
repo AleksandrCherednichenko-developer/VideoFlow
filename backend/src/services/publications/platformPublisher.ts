@@ -1,18 +1,17 @@
 import { AppError } from "../../api/errors/AppError.js";
 import { PLATFORM, type Platform } from "../../config/constants.js";
 import {
-  buildVkVideoUrl,
+  buildVkWallPostUrl,
   createWallPost,
-  saveVideo,
-  uploadVideo,
   VkApiError,
 } from "../../platforms/vk/vkClient.js";
 import { getActivePlatformAccountSecret } from "../oauth/accountService.js";
 import {
+  buildPublicUrl,
+  createPresignedGetUrl,
   createR2Client,
-  getObjectBuffer,
-  getObjectMetadata,
   getR2Config,
+  PRESIGNED_GET_URL_MAX_EXPIRES_SECONDS,
 } from "../upload/r2Client.js";
 import type { PublicationPlatformInput } from "./publicationSchemas.js";
 
@@ -51,14 +50,6 @@ export class PlatformPublishError extends Error {
     this.code = code;
     this.rawResponse = rawResponse;
   }
-}
-
-function getFilenameFromR2Key(videoR2Key: string): string {
-  return videoR2Key.split("/").at(-1) ?? "video.mp4";
-}
-
-function normalizeContentType(contentType: string | undefined): string {
-  return contentType ?? "video/mp4";
 }
 
 function resolvePublishText(
@@ -127,32 +118,51 @@ function normalizePublishError(error: unknown): PlatformPublishError {
   );
 }
 
-async function downloadVideo(input: {
-  videoR2Key: string;
-}): Promise<{
-  buffer: Buffer;
-  filename: string;
-  contentType: string;
-}> {
+async function resolveVideoLink(videoR2Key: string): Promise<string> {
   const config = getR2Config();
-  const client = createR2Client(config);
-  const [metadata, buffer] = await Promise.all([
-    getObjectMetadata(client, config.bucket, input.videoR2Key),
-    getObjectBuffer(client, config.bucket, input.videoR2Key),
-  ]);
+  const publicUrl = buildPublicUrl(config, videoR2Key);
 
-  if (metadata === null || buffer === null) {
+  if (publicUrl !== undefined) {
+    return publicUrl;
+  }
+
+  const client = createR2Client(config);
+  const presignedUrl = await createPresignedGetUrl(
+    client,
+    config.bucket,
+    videoR2Key,
+    PRESIGNED_GET_URL_MAX_EXPIRES_SECONDS,
+  );
+
+  console.warn(
+    "R2_PUBLIC_URL is not configured; using a temporary presigned video link for VK publish",
+    {
+      videoR2Key,
+      expiresInSeconds: PRESIGNED_GET_URL_MAX_EXPIRES_SECONDS,
+    },
+  );
+
+  return presignedUrl;
+}
+
+function parseVkGroupId(externalAccountId: string | null): number {
+  if (externalAccountId === null || externalAccountId.length === 0) {
     throw new PlatformPublishError(
-      "UploadNotFound",
-      "Uploaded video was not found in storage",
+      "VkAccountNotConnected",
+      "VK community group ID is missing",
     );
   }
 
-  return {
-    buffer,
-    filename: getFilenameFromR2Key(input.videoR2Key),
-    contentType: normalizeContentType(metadata.contentType),
-  };
+  const groupId = Number(externalAccountId);
+
+  if (!Number.isInteger(groupId) || groupId <= 0) {
+    throw new PlatformPublishError(
+      "VkInvalidGroupId",
+      "VK community group ID is invalid",
+    );
+  }
+
+  return groupId;
 }
 
 export async function publishVk(
@@ -160,40 +170,31 @@ export async function publishVk(
 ): Promise<PlatformPublishResult> {
   try {
     const account = await getActivePlatformAccountSecret(input.userId, PLATFORM.VK);
-    const video = await downloadVideo({
-      videoR2Key: input.videoR2Key,
-    });
+    const groupId = parseVkGroupId(account.externalAccountId);
     const description = resolvePublishText(
       input.platforms,
       PLATFORM.VK,
       input.defaultText,
     );
-    const savedVideo = await saveVideo({
-      accessToken: account.accessToken,
-      name: `VideoFlow publication ${input.publicationId}`,
-      description,
-    });
-    const uploadedVideo = await uploadVideo({
-      uploadUrl: savedVideo.uploadUrl,
-      video: video.buffer,
-      filename: video.filename,
-      contentType: video.contentType,
-    });
+    const videoLink = await resolveVideoLink(input.videoR2Key);
+    const message =
+      description.length > 0
+        ? `${description}\n\n${videoLink}`
+        : videoLink;
     const wallPost = await createWallPost({
       accessToken: account.accessToken,
-      ownerId: savedVideo.ownerId,
-      videoId: savedVideo.videoId,
-      message: description,
+      ownerId: -groupId,
+      message,
     });
-    const externalId = `${savedVideo.ownerId}_${savedVideo.videoId}`;
+    const externalId = `-${groupId}_${wallPost.postId}`;
 
     return {
       outcome: PLATFORM_PUBLISH_OUTCOME.PUBLISHED,
       externalId,
-      resultUrl: buildVkVideoUrl(savedVideo.ownerId, savedVideo.videoId),
+      resultUrl: buildVkWallPostUrl(groupId, wallPost.postId),
       rawResponse: {
-        videoSave: savedVideo.rawResponse,
-        upload: uploadedVideo.rawResponse,
+        publishMode: "wall_link",
+        videoLink,
         wallPost: wallPost.rawResponse,
         postId: wallPost.postId,
       },

@@ -39,27 +39,6 @@ interface YouTubeChannelsResponse {
   }>;
 }
 
-interface VkTokenResponse {
-  access_token?: string;
-  expires_in?: number;
-  user_id?: number;
-  error?: string;
-  error_description?: string;
-  error_reason?: string;
-}
-
-interface VkUsersResponse {
-  response?: Array<{
-    id?: number;
-    first_name?: string;
-    last_name?: string;
-  }>;
-  error?: {
-    error_code?: number;
-    error_msg?: string;
-  };
-}
-
 function normalizeOptionalEnv(value: string | undefined): string | null {
   const normalizedValue = value?.trim();
 
@@ -117,62 +96,6 @@ async function readJsonResponse(response: Response): Promise<unknown> {
   return responseBody;
 }
 
-function getVkErrorMessage(value: unknown): string | null {
-  if (!isObject(value)) {
-    return null;
-  }
-
-  if (typeof value.error_description === "string" && value.error_description.length > 0) {
-    return value.error_description;
-  }
-
-  if (
-    "error" in value &&
-    isObject(value.error) &&
-    typeof value.error.error_msg === "string" &&
-    value.error.error_msg.length > 0
-  ) {
-    return value.error.error_msg;
-  }
-
-  if (typeof value.error_reason === "string" && value.error_reason.length > 0) {
-    return value.error_reason;
-  }
-
-  if (typeof value.error === "string" && value.error.length > 0) {
-    return value.error;
-  }
-
-  return null;
-}
-
-function throwVkProviderError(value: unknown, fallbackMessage: string): never {
-  throw new AppError(
-    502,
-    "OAuthProviderRejected",
-    getVkErrorMessage(value) ?? fallbackMessage,
-  );
-}
-
-async function readVkJsonResponse(
-  response: Response,
-  fallbackMessage: string,
-): Promise<unknown> {
-  const responseBody = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throwVkProviderError(responseBody, fallbackMessage);
-  }
-
-  const vkErrorMessage = getVkErrorMessage(responseBody);
-
-  if (vkErrorMessage !== null) {
-    throw new AppError(502, "OAuthProviderRejected", vkErrorMessage);
-  }
-
-  return responseBody;
-}
-
 function getRequiredToken(value: unknown): string {
   if (isObject(value) && typeof value.access_token === "string") {
     return value.access_token;
@@ -203,28 +126,6 @@ function getYouTubeConfig():
   return {
     clientId,
     clientSecret,
-    redirectUrl,
-  };
-}
-
-function getVkConfig():
-  | {
-      appId: string;
-      appSecret: string;
-      redirectUrl: string;
-    }
-  | null {
-  const appId = normalizeOptionalEnv(env.VK_APP_ID);
-  const appSecret = normalizeOptionalEnv(env.VK_APP_SECRET);
-  const redirectUrl = normalizeOptionalEnv(env.VK_REDIRECT_URL);
-
-  if (appId === null || appSecret === null || redirectUrl === null) {
-    return null;
-  }
-
-  return {
-    appId,
-    appSecret,
     redirectUrl,
   };
 }
@@ -325,99 +226,8 @@ export const youtubeProvider: OAuthProvider = {
   },
 };
 
-export const vkProvider: OAuthProvider = {
-  platform: PLATFORM.VK,
-  displayName: "VK",
-  isConfigured: () => getVkConfig() !== null,
-  buildAuthorizationUrl: (state) => {
-    const config = getVkConfig();
-
-    if (config === null) {
-      throw new AppError(
-        503,
-        "OAuthProviderNotConfigured",
-        "VK OAuth is not configured",
-      );
-    }
-
-    const url = new URL("https://oauth.vk.com/authorize");
-    url.searchParams.set("client_id", config.appId);
-    url.searchParams.set("redirect_uri", config.redirectUrl);
-    url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", "video,wall,offline");
-    url.searchParams.set("state", state);
-    url.searchParams.set("v", "5.199");
-
-    return url.toString();
-  },
-  exchangeCode: async (code) => {
-    const config = getVkConfig();
-
-    if (config === null) {
-      throw new AppError(
-        503,
-        "OAuthProviderNotConfigured",
-        "VK OAuth is not configured",
-      );
-    }
-
-    const url = new URL("https://oauth.vk.com/access_token");
-    url.searchParams.set("client_id", config.appId);
-    url.searchParams.set("client_secret", config.appSecret);
-    url.searchParams.set("redirect_uri", config.redirectUrl);
-    url.searchParams.set("code", code);
-
-    const response = await fetch(url);
-    const responseBody = await readVkJsonResponse(
-      response,
-      "VK OAuth token exchange failed",
-    );
-    const accessToken = getRequiredToken(responseBody);
-    const tokenResponse = responseBody as VkTokenResponse;
-
-    return buildOAuthTokens({
-      accessToken,
-      ...(typeof tokenResponse.expires_in === "number" &&
-      tokenResponse.expires_in > 0
-        ? { expiresInSeconds: tokenResponse.expires_in }
-        : {}),
-      rawResponse: responseBody,
-    });
-  },
-  fetchAccountProfile: async (tokens) => {
-    const rawResponse = tokens.rawResponse as VkTokenResponse;
-    const userId = rawResponse.user_id;
-
-    if (typeof userId !== "number") {
-      return {
-        rawResponse: tokens.rawResponse,
-      };
-    }
-
-    const url = new URL("https://api.vk.com/method/users.get");
-    url.searchParams.set("access_token", tokens.accessToken);
-    url.searchParams.set("user_ids", userId.toString());
-    url.searchParams.set("v", "5.199");
-
-    const response = await fetch(url);
-    const responseBody = await readVkJsonResponse(
-      response,
-      "VK account profile request failed",
-    );
-    const user = (responseBody as VkUsersResponse).response?.[0];
-    const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ");
-
-    return {
-      externalAccountId: userId.toString(),
-      ...(name.length > 0 ? { externalAccountName: name } : {}),
-      rawResponse: responseBody,
-    };
-  },
-};
-
 export const OAUTH_PROVIDERS = {
   [PLATFORM.YOUTUBE]: youtubeProvider,
-  [PLATFORM.VK]: vkProvider,
 } as const;
 
 export type SupportedOAuthPlatform = keyof typeof OAUTH_PROVIDERS;
