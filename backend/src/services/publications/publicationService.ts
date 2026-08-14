@@ -39,7 +39,6 @@ const PRISMA_PLATFORM_BY_API_PLATFORM = {
   [PLATFORM.YOUTUBE]: PrismaPlatform.YOUTUBE,
   [PLATFORM.VK]: PrismaPlatform.VK,
   [PLATFORM.INSTAGRAM]: PrismaPlatform.INSTAGRAM,
-  [PLATFORM.THREADS]: PrismaPlatform.THREADS,
   [PLATFORM.TIKTOK]: PrismaPlatform.TIKTOK,
   [PLATFORM.PINTEREST]: PrismaPlatform.PINTEREST,
 } as const satisfies Record<Platform, PrismaPlatform>;
@@ -48,7 +47,6 @@ const API_PLATFORM_BY_PRISMA_PLATFORM = {
   [PrismaPlatform.YOUTUBE]: PLATFORM.YOUTUBE,
   [PrismaPlatform.VK]: PLATFORM.VK,
   [PrismaPlatform.INSTAGRAM]: PLATFORM.INSTAGRAM,
-  [PrismaPlatform.THREADS]: PLATFORM.THREADS,
   [PrismaPlatform.TIKTOK]: PLATFORM.TIKTOK,
   [PrismaPlatform.PINTEREST]: PLATFORM.PINTEREST,
 } as const satisfies Record<PrismaPlatform, Platform>;
@@ -180,13 +178,6 @@ function normalizePlatforms(
   platforms: PublicationPlatformInput[],
 ): Prisma.InputJsonArray {
   return platforms.map((platformSettings) => {
-    if (platformSettings.platform === PLATFORM.THREADS) {
-      return {
-        platform: platformSettings.platform,
-        enabled: platformSettings.enabled,
-      };
-    }
-
     if (platformSettings.platform === PLATFORM.PINTEREST) {
       return removeUndefinedValues({
         platform: platformSettings.platform,
@@ -231,23 +222,6 @@ export function resolvePlatformText(
   platform: Platform,
   defaultText: string,
 ): string {
-  if (platform === PLATFORM.THREADS) {
-    const instagramSettings = platforms.find(
-      (platformSettings) => platformSettings.platform === PLATFORM.INSTAGRAM,
-    );
-
-    if (
-      instagramSettings !== undefined &&
-      "text" in instagramSettings &&
-      instagramSettings.text !== undefined &&
-      instagramSettings.text !== null
-    ) {
-      return instagramSettings.text;
-    }
-
-    return defaultText;
-  }
-
   const platformSettings = platforms.find(
     (settings) => settings.platform === platform,
   );

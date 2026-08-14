@@ -14,7 +14,6 @@ export const PLATFORM = {
   YOUTUBE: "youtube",
   VK: "vk",
   INSTAGRAM: "instagram",
-  THREADS: "threads",
   TIKTOK: "tiktok",
   PINTEREST: "pinterest",
 } as const;

@@ -35,11 +35,6 @@ const instagramPlatformSchema = z.object({
   text: textOverrideSchema,
 });
 
-const threadsPlatformSchema = z.object({
-  platform: z.literal(PLATFORM.THREADS),
-  enabled: z.boolean(),
-});
-
 const vkPlatformSchema = z.object({
   platform: z.literal(PLATFORM.VK),
   enabled: z.boolean(),
@@ -63,7 +58,6 @@ const pinterestPlatformSchema = z.object({
 export const publicationPlatformSchema = z.discriminatedUnion("platform", [
   youtubePlatformSchema,
   instagramPlatformSchema,
-  threadsPlatformSchema,
   vkPlatformSchema,
   tiktokPlatformSchema,
   pinterestPlatformSchema,

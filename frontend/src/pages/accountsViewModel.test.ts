@@ -6,6 +6,7 @@ import {
 } from "../api/accountsApi";
 import {
   ACCOUNT_CONNECTION_METHOD,
+  ACCOUNT_PLATFORM_LIST,
   buildAccountPlatformCards,
   getAccountConnectionMethod,
   getAccountPlatformLabel,
@@ -15,7 +16,7 @@ import {
 function buildAccount(overrides: Partial<AccountResponse>): AccountResponse {
   return {
     id: "account-id",
-    platform: ACCOUNT_PLATFORM.VK,
+    platform: ACCOUNT_PLATFORM.YOUTUBE,
     externalAccountId: "external-id",
     externalAccountName: "External Account",
     expiresAt: null,
@@ -28,13 +29,11 @@ function buildAccount(overrides: Partial<AccountResponse>): AccountResponse {
 }
 
 describe("accountsViewModel", () => {
-  it("marks only MVP connectable platforms with the right connection method", () => {
-    expect(isAccountPlatformConnectable(ACCOUNT_PLATFORM.VK)).toBe(true);
+  it("marks only implemented OAuth platforms as connectable", () => {
+    expect(isAccountPlatformConnectable(ACCOUNT_PLATFORM.VK)).toBe(false);
     expect(isAccountPlatformConnectable(ACCOUNT_PLATFORM.YOUTUBE)).toBe(true);
     expect(isAccountPlatformConnectable(ACCOUNT_PLATFORM.INSTAGRAM)).toBe(false);
-    expect(getAccountConnectionMethod(ACCOUNT_PLATFORM.VK)).toBe(
-      ACCOUNT_CONNECTION_METHOD.MANUAL_VK,
-    );
+    expect(getAccountConnectionMethod(ACCOUNT_PLATFORM.VK)).toBeNull();
     expect(getAccountConnectionMethod(ACCOUNT_PLATFORM.YOUTUBE)).toBe(
       ACCOUNT_CONNECTION_METHOD.OAUTH,
     );
@@ -43,18 +42,20 @@ describe("accountsViewModel", () => {
   it("builds connected and coming-later cards", () => {
     const cards = buildAccountPlatformCards([
       buildAccount({
-        platform: ACCOUNT_PLATFORM.VK,
+        platform: ACCOUNT_PLATFORM.YOUTUBE,
       }),
     ]);
-    const vkCard = cards.find((card) => card.platform === ACCOUNT_PLATFORM.VK);
+    const youtubeCard = cards.find(
+      (card) => card.platform === ACCOUNT_PLATFORM.YOUTUBE,
+    );
     const instagramCard = cards.find(
       (card) => card.platform === ACCOUNT_PLATFORM.INSTAGRAM,
     );
 
-    expect(vkCard).toMatchObject({
-      label: "VK",
+    expect(youtubeCard).toMatchObject({
+      label: "YouTube",
       isConnectable: true,
-      connectionMethod: ACCOUNT_CONNECTION_METHOD.MANUAL_VK,
+      connectionMethod: ACCOUNT_CONNECTION_METHOD.OAUTH,
       account: expect.objectContaining({
         externalAccountName: "External Account",
       }),
@@ -69,5 +70,6 @@ describe("accountsViewModel", () => {
   it("returns user-facing platform labels", () => {
     expect(getAccountPlatformLabel(ACCOUNT_PLATFORM.YOUTUBE)).toBe("YouTube");
     expect(getAccountPlatformLabel(ACCOUNT_PLATFORM.PINTEREST)).toBe("Pinterest");
+    expect(ACCOUNT_PLATFORM_LIST).not.toContain("threads");
   });
 });

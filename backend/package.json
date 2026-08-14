@@ -12,8 +12,6 @@
     "worker": "node dist/workers/publicationWorker.js",
     "worker:dev": "tsx watch src/workers/publicationWorker.ts",
     "auth:reset-password": "tsx src/scripts/resetPassword.ts",
-    "vk:status": "tsx src/scripts/vkStatus.ts",
-    "vk:create-test-publication": "tsx src/scripts/createVkTestPublication.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",

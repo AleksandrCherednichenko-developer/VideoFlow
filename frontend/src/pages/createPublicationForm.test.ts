@@ -24,17 +24,19 @@ describe("createPublicationForm", () => {
     expect(localDateTimeToUtcIso("", "10:30")).toBeNull();
   });
 
-  it("builds YouTube and VK payload with overrides", () => {
+  it("builds the three MVP platform payloads with overrides", () => {
     expect(
       buildPublicationPlatforms(
         {
           youtube: true,
-          vk: true,
+          instagram: true,
+          tiktok: true,
         },
         "  Launch title ",
         {
           youtubeText: " YouTube copy ",
-          vkText: "",
+          instagramText: " Instagram copy ",
+          tiktokText: "",
         },
       ),
     ).toEqual([
@@ -45,7 +47,12 @@ describe("createPublicationForm", () => {
         text: "YouTube copy",
       },
       {
-        platform: "vk",
+        platform: "instagram",
+        enabled: true,
+        text: "Instagram copy",
+      },
+      {
+        platform: "tiktok",
         enabled: true,
         text: null,
       },
@@ -60,12 +67,14 @@ describe("createPublicationForm", () => {
       time: "10:30",
       platforms: {
         youtube: false,
-        vk: true,
+        instagram: true,
+        tiktok: false,
       },
       youtubeTitle: "",
       overrides: {
         youtubeText: "",
-        vkText: "VK copy",
+        instagramText: "Instagram copy",
+        tiktokText: "",
       },
     });
 
@@ -79,9 +88,14 @@ describe("createPublicationForm", () => {
           text: null,
         },
         {
-          platform: "vk",
+          platform: "instagram",
           enabled: true,
-          text: "VK copy",
+          text: "Instagram copy",
+        },
+        {
+          platform: "tiktok",
+          enabled: false,
+          text: null,
         },
       ],
     });
@@ -114,12 +128,14 @@ describe("createPublicationForm", () => {
       time: "10:30",
       platforms: {
         youtube: true,
-        vk: false,
+        instagram: false,
+        tiktok: false,
       },
       youtubeTitle: "",
       overrides: {
         youtubeText: "",
-        vkText: "",
+        instagramText: "",
+        tiktokText: "",
       },
     });
 
@@ -144,12 +160,14 @@ describe("createPublicationForm", () => {
       time: "10:30",
       platforms: {
         youtube: false,
-        vk: true,
+        instagram: true,
+        tiktok: false,
       },
       youtubeTitle: "",
       overrides: {
         youtubeText: "",
-        vkText: "",
+        instagramText: "",
+        tiktokText: "",
       },
     });
 

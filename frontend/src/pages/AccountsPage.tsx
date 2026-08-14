@@ -1,11 +1,9 @@
 import { Plug, Unplug } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 
 import {
-  ACCOUNT_PLATFORM,
-  connectVkCommunity,
   disconnectAccount,
   listAccounts,
   startOAuth,
@@ -15,7 +13,6 @@ import { getApiErrorMessage } from "../api/errorMessage";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Button } from "../components/ui/button";
 import {
-  ACCOUNT_CONNECTION_METHOD,
   buildAccountPlatformCards,
   formatAccountExpiry,
   getAccountPlatformLabel,
@@ -43,8 +40,6 @@ function getOAuthNotice(searchParams: URLSearchParams): string | null {
 export function AccountsPage() {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [vkGroupId, setVkGroupId] = useState("");
-  const [vkAccessToken, setVkAccessToken] = useState("");
   const accountsQuery = useQuery({
     queryKey: ["accounts"],
     queryFn: listAccounts,
@@ -58,14 +53,6 @@ export function AccountsPage() {
     mutationFn: startOAuth,
     onSuccess: (response) => {
       window.location.assign(response.authorizationUrl);
-    },
-  });
-  const connectVkMutation = useMutation({
-    mutationFn: connectVkCommunity,
-    onSuccess: async () => {
-      setVkGroupId("");
-      setVkAccessToken("");
-      await queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
   });
   const disconnectMutation = useMutation({
@@ -154,77 +141,21 @@ export function AccountsPage() {
                     <dd className="break-all">{card.account.externalAccountId}</dd>
                   </div>
                 ) : null}
-                {card.platform === ACCOUNT_PLATFORM.VK ? (
-                  <div>
-                    <dt className="text-muted-foreground">Publish mode</dt>
-                    <dd>Link post (native video pending VK approval)</dd>
-                  </div>
-                ) : null}
               </dl>
             ) : null}
 
             {card.isConnectable ? (
               card.account === null ? (
-                card.connectionMethod === ACCOUNT_CONNECTION_METHOD.MANUAL_VK ? (
-                  <form
-                    className="mt-4 space-y-3"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      connectVkMutation.mutate({
-                        groupId: vkGroupId,
-                        accessToken: vkAccessToken,
-                      });
-                    }}
-                  >
-                    <p className="text-xs text-muted-foreground">
-                      In your VK community: Settings → API → create a community
-                      access token with wall and photos/video/files permissions.
-                    </p>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Group ID</span>
-                      <input
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        name="vkGroupId"
-                        required
-                        value={vkGroupId}
-                        onChange={(event) => setVkGroupId(event.target.value)}
-                      />
-                    </label>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">
-                        Community access token
-                      </span>
-                      <input
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        name="vkAccessToken"
-                        required
-                        type="password"
-                        value={vkAccessToken}
-                        onChange={(event) => setVkAccessToken(event.target.value)}
-                      />
-                    </label>
-                    <Button
-                      className="w-full"
-                      disabled={connectVkMutation.isPending}
-                      type="submit"
-                      variant="outline"
-                    >
-                      <Plug className="h-4 w-4" aria-hidden="true" />
-                      Connect community
-                    </Button>
-                  </form>
-                ) : (
-                  <Button
-                    className="mt-4 w-full"
-                    disabled={connectMutation.isPending}
-                    type="button"
-                    variant="outline"
-                    onClick={() => connectMutation.mutate(card.platform)}
-                  >
-                    <Plug className="h-4 w-4" aria-hidden="true" />
-                    Connect
-                  </Button>
-                )
+                <Button
+                  className="mt-4 w-full"
+                  disabled={connectMutation.isPending}
+                  type="button"
+                  variant="outline"
+                  onClick={() => connectMutation.mutate(card.platform)}
+                >
+                  <Plug className="h-4 w-4" aria-hidden="true" />
+                  Connect
+                </Button>
               ) : (
                 <Button
                   className="mt-4 w-full"
@@ -249,15 +180,6 @@ export function AccountsPage() {
       {connectMutation.isError ? (
         <p className="mt-4 text-sm text-destructive">
           {getApiErrorMessage(connectMutation.error, "Could not start OAuth.")}
-        </p>
-      ) : null}
-
-      {connectVkMutation.isError ? (
-        <p className="mt-4 text-sm text-destructive">
-          {getApiErrorMessage(
-            connectVkMutation.error,
-            "Could not connect VK community.",
-          )}
         </p>
       ) : null}
 

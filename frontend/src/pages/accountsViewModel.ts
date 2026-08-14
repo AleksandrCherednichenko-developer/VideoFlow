@@ -5,24 +5,21 @@ import {
 } from "../api/accountsApi";
 
 export const CONNECTABLE_ACCOUNT_PLATFORMS = [
-  ACCOUNT_PLATFORM.VK,
   ACCOUNT_PLATFORM.YOUTUBE,
 ] as const;
 
 export const ACCOUNT_CONNECTION_METHOD = {
   OAUTH: "oauth",
-  MANUAL_VK: "manual-vk",
 } as const;
 
 export type AccountConnectionMethod =
   (typeof ACCOUNT_CONNECTION_METHOD)[keyof typeof ACCOUNT_CONNECTION_METHOD];
 
 export const ACCOUNT_PLATFORM_LIST = [
-  ACCOUNT_PLATFORM.VK,
   ACCOUNT_PLATFORM.YOUTUBE,
   ACCOUNT_PLATFORM.INSTAGRAM,
-  ACCOUNT_PLATFORM.THREADS,
   ACCOUNT_PLATFORM.TIKTOK,
+  ACCOUNT_PLATFORM.VK,
   ACCOUNT_PLATFORM.PINTEREST,
 ] as const;
 
@@ -41,10 +38,6 @@ export function getAccountConnectionMethod(
     return null;
   }
 
-  if (platform === ACCOUNT_PLATFORM.VK) {
-    return ACCOUNT_CONNECTION_METHOD.MANUAL_VK;
-  }
-
   return ACCOUNT_CONNECTION_METHOD.OAUTH;
 }
 
@@ -53,7 +46,6 @@ export function getAccountPlatformLabel(platform: AccountPlatform): string {
     [ACCOUNT_PLATFORM.VK]: "VK",
     [ACCOUNT_PLATFORM.YOUTUBE]: "YouTube",
     [ACCOUNT_PLATFORM.INSTAGRAM]: "Instagram",
-    [ACCOUNT_PLATFORM.THREADS]: "Threads",
     [ACCOUNT_PLATFORM.TIKTOK]: "TikTok",
     [ACCOUNT_PLATFORM.PINTEREST]: "Pinterest",
   } as const satisfies Record<AccountPlatform, string>;

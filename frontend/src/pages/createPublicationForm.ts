@@ -16,12 +16,14 @@ export const ALLOWED_VIDEO_CONTENT_TYPES = [
 
 export interface PlatformSelectionState {
   youtube: boolean;
-  vk: boolean;
+  instagram: boolean;
+  tiktok: boolean;
 }
 
 export interface PlatformOverrideState {
   youtubeText: string;
-  vkText: string;
+  instagramText: string;
+  tiktokText: string;
 }
 
 export interface SelectedVideoFile {
@@ -128,9 +130,14 @@ export function buildPublicationPlatforms(
       text: normalizeOptionalText(overrides.youtubeText),
     },
     {
-      platform: PLATFORM.VK,
-      enabled: platforms.vk,
-      text: normalizeOptionalText(overrides.vkText),
+      platform: PLATFORM.INSTAGRAM,
+      enabled: platforms.instagram,
+      text: normalizeOptionalText(overrides.instagramText),
+    },
+    {
+      platform: PLATFORM.TIKTOK,
+      enabled: platforms.tiktok,
+      text: normalizeOptionalText(overrides.tiktokText),
     },
   ];
 }
@@ -176,7 +183,11 @@ export function validateCreatePublicationForm(
     errors.scheduledAt = "Choose a valid publication date and time.";
   }
 
-  if (!state.platforms.youtube && !state.platforms.vk) {
+  if (
+    !state.platforms.youtube &&
+    !state.platforms.instagram &&
+    !state.platforms.tiktok
+  ) {
     errors.platforms = "Choose at least one platform.";
   }
 

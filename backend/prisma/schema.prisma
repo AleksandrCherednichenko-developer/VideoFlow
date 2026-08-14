@@ -20,7 +20,6 @@ enum Platform {
   YOUTUBE   @map("youtube")
   VK        @map("vk")
   INSTAGRAM @map("instagram")
-  THREADS   @map("threads")
   TIKTOK    @map("tiktok")
   PINTEREST @map("pinterest")
 }
@@ -37,7 +36,6 @@ model User {
   id                        String            @id @default(uuid()) @db.Uuid
   email                     String            @unique
   passwordHash              String            @map("password_hash")
-  emailNotificationsEnabled Boolean           @default(true) @map("email_notifications_enabled")
   timezone                  String            @default("UTC")
   createdAt                 DateTime          @default(now()) @map("created_at")
   updatedAt                 DateTime          @updatedAt @map("updated_at")

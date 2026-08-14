@@ -26,7 +26,8 @@ export type PublicationStatusFilter =
 export const PLATFORM_FILTER = {
   ALL: "all",
   YOUTUBE: PLATFORM.YOUTUBE,
-  VK: PLATFORM.VK,
+  INSTAGRAM: PLATFORM.INSTAGRAM,
+  TIKTOK: PLATFORM.TIKTOK,
 } as const;
 
 export type PlatformFilter =
@@ -61,7 +62,11 @@ export function getPlatformLabel(platform: MvpPlatform): string {
     return "YouTube";
   }
 
-  return "VK";
+  if (platform === PLATFORM.INSTAGRAM) {
+    return "Instagram";
+  }
+
+  return "TikTok";
 }
 
 export function formatPublicationDateTime(value: string): string {

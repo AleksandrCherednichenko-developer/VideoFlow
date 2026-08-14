@@ -8,7 +8,6 @@ import { AppError } from "../../api/errors/AppError.js";
 import { PLATFORM, type Platform } from "../../config/constants.js";
 import { prisma } from "../../db/prisma.js";
 import { decryptSecret, encryptSecret } from "../security/encryptionService.js";
-import { getGroupById, VkApiError } from "../../platforms/vk/vkClient.js";
 import {
   getOAuthProvider,
   type OAuthAccountProfile,
@@ -20,7 +19,6 @@ const PRISMA_PLATFORM_BY_API_PLATFORM = {
   [PLATFORM.YOUTUBE]: PrismaPlatform.YOUTUBE,
   [PLATFORM.VK]: PrismaPlatform.VK,
   [PLATFORM.INSTAGRAM]: PrismaPlatform.INSTAGRAM,
-  [PLATFORM.THREADS]: PrismaPlatform.THREADS,
   [PLATFORM.TIKTOK]: PrismaPlatform.TIKTOK,
   [PLATFORM.PINTEREST]: PrismaPlatform.PINTEREST,
 } as const satisfies Record<Platform, PrismaPlatform>;
@@ -29,7 +27,6 @@ const API_PLATFORM_BY_PRISMA_PLATFORM = {
   [PrismaPlatform.YOUTUBE]: PLATFORM.YOUTUBE,
   [PrismaPlatform.VK]: PLATFORM.VK,
   [PrismaPlatform.INSTAGRAM]: PLATFORM.INSTAGRAM,
-  [PrismaPlatform.THREADS]: PLATFORM.THREADS,
   [PrismaPlatform.TIKTOK]: PLATFORM.TIKTOK,
   [PrismaPlatform.PINTEREST]: PLATFORM.PINTEREST,
 } as const satisfies Record<PrismaPlatform, Platform>;
@@ -181,88 +178,6 @@ export async function disconnectAccount(
       platform: PRISMA_PLATFORM_BY_API_PLATFORM[platform],
     },
   });
-}
-
-export async function connectVkCommunityAccount(
-  userId: string,
-  groupId: string,
-  accessToken: string,
-): Promise<AccountResponse> {
-  const normalizedGroupId = groupId.trim();
-  const normalizedAccessToken = accessToken.trim();
-
-  if (normalizedGroupId.length === 0 || normalizedAccessToken.length === 0) {
-    throw new AppError(
-      400,
-      "VkCommunityTokenInvalid",
-      "VK community group ID and access token are required",
-    );
-  }
-
-  let groupInfo;
-
-  try {
-    groupInfo = await getGroupById(normalizedAccessToken, normalizedGroupId);
-  } catch (error) {
-    if (error instanceof VkApiError) {
-      throw new AppError(
-        400,
-        "VkCommunityTokenInvalid",
-        error.message,
-      );
-    }
-
-    throw error;
-  }
-
-  if (groupInfo.id.toString() !== normalizedGroupId) {
-    throw new AppError(
-      400,
-      "VkCommunityTokenInvalid",
-      "VK community token does not match the provided group ID",
-    );
-  }
-
-  const account = await prisma.platformAccount.upsert({
-    where: {
-      userId_platform: {
-        userId,
-        platform: PrismaPlatform.VK,
-      },
-    },
-    create: {
-      userId,
-      platform: PrismaPlatform.VK,
-      externalAccountId: normalizedGroupId,
-      externalAccountName: groupInfo.name,
-      accessTokenEncrypted: encryptSecret(normalizedAccessToken),
-      refreshTokenEncrypted: null,
-      expiresAt: null,
-      metadata: {
-        connectionMethod: "community_token",
-        groupId: normalizedGroupId,
-        screenName: groupInfo.screenName,
-        groupResponse: groupInfo.rawResponse as Prisma.InputJsonValue,
-      },
-      isActive: true,
-    },
-    update: {
-      externalAccountId: normalizedGroupId,
-      externalAccountName: groupInfo.name,
-      accessTokenEncrypted: encryptSecret(normalizedAccessToken),
-      refreshTokenEncrypted: null,
-      expiresAt: null,
-      metadata: {
-        connectionMethod: "community_token",
-        groupId: normalizedGroupId,
-        screenName: groupInfo.screenName,
-        groupResponse: groupInfo.rawResponse as Prisma.InputJsonValue,
-      },
-      isActive: true,
-    },
-  });
-
-  return serializeAccount(account);
 }
 
 export async function getActivePlatformAccountSecret(

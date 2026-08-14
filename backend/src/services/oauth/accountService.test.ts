@@ -30,7 +30,7 @@ vi.mock("./oauthState.js", () => ({
   createOAuthState: vi.fn(() => "signed-state"),
   verifyOAuthState: vi.fn(() => ({
     userId: "11111111-1111-4111-8111-111111111111",
-    platform: "vk",
+    platform: "youtube",
     nonce: "nonce",
     expiresAt: "2026-06-30T10:10:00.000Z",
   })),
@@ -47,23 +47,9 @@ vi.mock("./oauthProviders.js", () => ({
   })),
 }));
 
-vi.mock("../../platforms/vk/vkClient.js", () => ({
-  getGroupById: vi.fn(),
-  VkApiError: class VkApiError extends Error {
-    public readonly code: string;
-
-    public constructor(code: string, message: string) {
-      super(message);
-      this.code = code;
-    }
-  },
-}));
-
 import { PLATFORM } from "../../config/constants.js";
-import { getGroupById, VkApiError } from "../../platforms/vk/vkClient.js";
 import {
   completeOAuthCallback,
-  connectVkCommunityAccount,
   disconnectAccount,
   getActivePlatformAccountSecret,
   listAccounts,
@@ -77,9 +63,9 @@ function buildAccount(overrides: Record<string, unknown> = {}) {
   return {
     id: "account-id",
     userId,
-    platform: PrismaPlatform.VK,
-    externalAccountId: "vk-user-id",
-    externalAccountName: "VK User",
+    platform: PrismaPlatform.YOUTUBE,
+    externalAccountId: "youtube-channel-id",
+    externalAccountName: "YouTube Channel",
     accessTokenEncrypted: "encrypted:access-token",
     refreshTokenEncrypted: null,
     expiresAt: null,
@@ -107,10 +93,10 @@ describe("accountService", () => {
       },
     });
     providerMocks.fetchAccountProfile.mockResolvedValue({
-      externalAccountId: "vk-user-id",
-      externalAccountName: "VK User",
+      externalAccountId: "youtube-channel-id",
+      externalAccountName: "YouTube Channel",
       rawResponse: {
-        id: "vk-user-id",
+        id: "youtube-channel-id",
       },
     });
     prismaMocks.platformAccount.upsert.mockResolvedValue(buildAccount());
@@ -171,38 +157,38 @@ describe("accountService", () => {
     const accounts = await listAccounts(userId);
 
     expect(accounts[0]).toMatchObject({
-      platform: PLATFORM.VK,
-      externalAccountName: "VK User",
+      platform: PLATFORM.YOUTUBE,
+      externalAccountName: "YouTube Channel",
       isActive: true,
     });
     expect(accounts[0]).not.toHaveProperty("accessTokenEncrypted");
   });
 
   it("disconnects only the user's platform account", async () => {
-    await disconnectAccount(userId, PLATFORM.VK);
+    await disconnectAccount(userId, PLATFORM.YOUTUBE);
 
     expect(prismaMocks.platformAccount.deleteMany).toHaveBeenCalledWith({
       where: {
         userId,
-        platform: PrismaPlatform.VK,
+        platform: PrismaPlatform.YOUTUBE,
       },
     });
   });
 
   it("returns decrypted active platform account secrets for the worker", async () => {
-    const secret = await getActivePlatformAccountSecret(userId, PLATFORM.VK);
+    const secret = await getActivePlatformAccountSecret(userId, PLATFORM.YOUTUBE);
 
     expect(prismaMocks.platformAccount.findUnique).toHaveBeenCalledWith({
       where: {
         userId_platform: {
           userId,
-          platform: PrismaPlatform.VK,
+          platform: PrismaPlatform.YOUTUBE,
         },
       },
     });
     expect(secret).toEqual({
       accessToken: "decrypted:encrypted:access-token",
-      externalAccountId: "vk-user-id",
+      externalAccountId: "youtube-channel-id",
       metadata: null,
       expiresAt: null,
     });
@@ -212,7 +198,7 @@ describe("accountService", () => {
     prismaMocks.platformAccount.findUnique.mockResolvedValueOnce(null);
 
     await expect(
-      getActivePlatformAccountSecret(userId, PLATFORM.VK),
+      getActivePlatformAccountSecret(userId, PLATFORM.YOUTUBE),
     ).rejects.toMatchObject({
       code: "PlatformAccountNotConnected",
     });
@@ -224,7 +210,7 @@ describe("accountService", () => {
     );
 
     await expect(
-      getActivePlatformAccountSecret(userId, PLATFORM.VK),
+      getActivePlatformAccountSecret(userId, PLATFORM.YOUTUBE),
     ).rejects.toMatchObject({
       code: "PlatformAccountInactive",
     });
@@ -238,7 +224,7 @@ describe("accountService", () => {
     );
 
     await expect(
-      getActivePlatformAccountSecret(userId, PLATFORM.VK),
+      getActivePlatformAccountSecret(userId, PLATFORM.YOUTUBE),
     ).rejects.toMatchObject({
       code: "PlatformAccountExpired",
     });
@@ -246,54 +232,4 @@ describe("accountService", () => {
     vi.useRealTimers();
   });
 
-  it("connects VK community accounts after validating the token", async () => {
-    vi.mocked(getGroupById).mockResolvedValueOnce({
-      id: 12345,
-      name: "Test Community",
-      screenName: "testcommunity",
-      rawResponse: { response: [{ id: 12345, name: "Test Community" }] },
-    });
-    prismaMocks.platformAccount.upsert.mockResolvedValueOnce(
-      buildAccount({
-        externalAccountId: "12345",
-        externalAccountName: "Test Community",
-      }),
-    );
-
-    const result = await connectVkCommunityAccount(
-      userId,
-      "12345",
-      "vk-community-token",
-    );
-
-    expect(getGroupById).toHaveBeenCalledWith("vk-community-token", "12345");
-    expect(prismaMocks.platformAccount.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        create: expect.objectContaining({
-          externalAccountId: "12345",
-          externalAccountName: "Test Community",
-          accessTokenEncrypted: "encrypted:vk-community-token",
-          refreshTokenEncrypted: null,
-          expiresAt: null,
-        }),
-      }),
-    );
-    expect(result).toMatchObject({
-      platform: PLATFORM.VK,
-      externalAccountId: "12345",
-      externalAccountName: "Test Community",
-    });
-  });
-
-  it("rejects invalid VK community tokens", async () => {
-    vi.mocked(getGroupById).mockRejectedValueOnce(
-      new VkApiError("VkGroupLookupFailed", "Access denied"),
-    );
-
-    await expect(
-      connectVkCommunityAccount(userId, "12345", "bad-token"),
-    ).rejects.toMatchObject({
-      code: "VkCommunityTokenInvalid",
-    });
-  });
 });

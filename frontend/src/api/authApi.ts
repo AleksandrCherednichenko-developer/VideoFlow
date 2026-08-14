@@ -4,7 +4,6 @@ export interface AuthUser {
   id: string;
   email: string;
   timezone: string;
-  emailNotificationsEnabled: boolean;
 }
 
 export interface AuthSessionResponse {

@@ -87,7 +87,7 @@ function buildPublication(overrides: Record<string, unknown> = {}) {
     status: PrismaPublicationStatus.SCHEDULED,
     platforms: [
       {
-        platform: "vk",
+        platform: "instagram",
         enabled: true,
       },
     ],
@@ -113,8 +113,8 @@ describe("publicationService", () => {
     prismaMocks.publicationResult.update.mockResolvedValue(undefined);
     publisherMocks.publishPlatform.mockResolvedValue({
       outcome: "published",
-      externalId: "vk-video-id",
-      resultUrl: "https://vk.com/video1_2",
+      externalId: "platform-video-id",
+      resultUrl: "https://social.example/video",
       rawResponse: {
         ok: true,
       },
@@ -134,7 +134,7 @@ describe("publicationService", () => {
         scheduledAt: now.toISOString(),
         platforms: [
           {
-            platform: "vk",
+            platform: "instagram",
             enabled: true,
           },
         ],
@@ -160,7 +160,7 @@ describe("publicationService", () => {
     expect(result.status).toBe("scheduled");
   });
 
-  it("resolves Threads text from Instagram settings", () => {
+  it("resolves platform-specific text", () => {
     expect(
       resolvePlatformText(
         [
@@ -169,12 +169,8 @@ describe("publicationService", () => {
             enabled: true,
             text: "Instagram override",
           },
-          {
-            platform: "threads",
-            enabled: true,
-          },
         ],
-        "threads",
+        "instagram",
         "Default text",
       ),
     ).toBe("Instagram override");
@@ -242,7 +238,7 @@ describe("publicationService", () => {
             title: "Video title",
           },
           {
-            platform: "vk",
+            platform: "instagram",
             enabled: true,
           },
         ],
@@ -269,7 +265,7 @@ describe("publicationService", () => {
     expect(prismaMocks.publicationResult.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
-          platform: PrismaPlatform.VK,
+          platform: PrismaPlatform.INSTAGRAM,
           status: PrismaPlatformResultStatus.PENDING,
         }),
       }),
@@ -279,7 +275,7 @@ describe("publicationService", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           status: PrismaPlatformResultStatus.PUBLISHED,
-          resultUrl: "https://vk.com/video1_2",
+          resultUrl: "https://social.example/video",
         }),
       }),
     );
@@ -290,14 +286,14 @@ describe("publicationService", () => {
       buildPublication({
         platforms: [
           {
-            platform: "vk",
+            platform: "instagram",
             enabled: true,
           },
         ],
       }),
     );
     publisherMocks.publishPlatform.mockRejectedValueOnce(
-      new Error("VK publish failed"),
+      new Error("Instagram publish failed"),
     );
 
     await processPublicationJob(publicationId);
@@ -307,7 +303,7 @@ describe("publicationService", () => {
         data: expect.objectContaining({
           status: PrismaPlatformResultStatus.FAILED,
           errorCode: "PlatformPublishFailed",
-          errorMessage: "VK publish failed",
+          errorMessage: "Instagram publish failed",
         }),
       }),
     );
@@ -323,7 +319,7 @@ describe("publicationService", () => {
             title: "Video title",
           },
           {
-            platform: "vk",
+            platform: "instagram",
             enabled: true,
           },
         ],
@@ -344,12 +340,12 @@ describe("publicationService", () => {
           {
             id: "result-2",
             publicationId,
-            platform: PrismaPlatform.VK,
+            platform: PrismaPlatform.INSTAGRAM,
             status: PrismaPlatformResultStatus.FAILED,
             externalId: null,
             resultUrl: null,
-            errorCode: "VkError",
-            errorMessage: "VK failed",
+            errorCode: "InstagramError",
+            errorMessage: "Instagram failed",
             rawResponse: null,
             createdAt: now,
             updatedAt: now,
@@ -381,7 +377,7 @@ describe("publicationService", () => {
             title: "Video title",
           },
           {
-            platform: "vk",
+            platform: "instagram",
             enabled: true,
           },
         ],
@@ -402,10 +398,10 @@ describe("publicationService", () => {
           {
             id: "result-2",
             publicationId,
-            platform: PrismaPlatform.VK,
+            platform: PrismaPlatform.INSTAGRAM,
             status: PrismaPlatformResultStatus.PUBLISHED,
-            externalId: "vk-id",
-            resultUrl: "https://vk.com/video1_2",
+            externalId: "instagram-id",
+            resultUrl: "https://instagram.example/video",
             errorCode: null,
             errorMessage: null,
             rawResponse: null,

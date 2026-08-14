@@ -25,7 +25,8 @@ export type PlatformResultStatus =
 
 export const PLATFORM = {
   YOUTUBE: "youtube",
-  VK: "vk",
+  INSTAGRAM: "instagram",
+  TIKTOK: "tiktok",
 } as const;
 
 export type MvpPlatform = (typeof PLATFORM)[keyof typeof PLATFORM];
@@ -37,15 +38,22 @@ export interface YouTubePlatformPayload {
   text?: string | null;
 }
 
-export interface VkPlatformPayload {
-  platform: typeof PLATFORM.VK;
+export interface InstagramPlatformPayload {
+  platform: typeof PLATFORM.INSTAGRAM;
+  enabled: boolean;
+  text?: string | null;
+}
+
+export interface TikTokPlatformPayload {
+  platform: typeof PLATFORM.TIKTOK;
   enabled: boolean;
   text?: string | null;
 }
 
 export type PublicationPlatformPayload =
   | YouTubePlatformPayload
-  | VkPlatformPayload;
+  | InstagramPlatformPayload
+  | TikTokPlatformPayload;
 
 export interface CreatePublicationRequest {
   videoR2Key: string;

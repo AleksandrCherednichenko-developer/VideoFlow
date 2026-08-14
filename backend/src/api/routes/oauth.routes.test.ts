@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const serviceMocks = vi.hoisted(() => ({
   startOAuth: vi.fn(),
   completeOAuthCallback: vi.fn(),
-  connectVkCommunityAccount: vi.fn(),
   listAccounts: vi.fn(),
   disconnectAccount: vi.fn(),
 }));
@@ -33,23 +32,12 @@ describe("oauth routes", () => {
     serviceMocks.completeOAuthCallback.mockResolvedValue({
       id: "account-id",
     });
-    serviceMocks.connectVkCommunityAccount.mockResolvedValue({
-      id: "account-id",
-      platform: "vk",
-      externalAccountId: "12345",
-      externalAccountName: "Test Community",
-      expiresAt: null,
-      isExpired: false,
-      isActive: true,
-      createdAt: "2026-06-30T10:00:00.000Z",
-      updatedAt: "2026-06-30T10:00:00.000Z",
-    });
     serviceMocks.listAccounts.mockResolvedValue([
       {
         id: "account-id",
-        platform: "vk",
-        externalAccountId: "12345",
-        externalAccountName: "Test Community",
+        platform: "youtube",
+        externalAccountId: "channel-id",
+        externalAccountName: "Test Channel",
         expiresAt: null,
         isExpired: false,
         isActive: true,
@@ -104,36 +92,6 @@ describe("oauth routes", () => {
     );
   });
 
-  it("connects VK community accounts for authenticated users", async () => {
-    const response = await request(app)
-      .post("/accounts/vk/connect")
-      .send({
-        groupId: "12345",
-        accessToken: "vk-community-token",
-      })
-      .expect(200);
-
-    expect(serviceMocks.connectVkCommunityAccount).toHaveBeenCalledWith(
-      "11111111-1111-4111-8111-111111111111",
-      "12345",
-      "vk-community-token",
-    );
-    expect(response.body).toMatchObject({
-      platform: "vk",
-      externalAccountId: "12345",
-    });
-  });
-
-  it("rejects invalid VK community connect payloads", async () => {
-    await request(app)
-      .post("/accounts/vk/connect")
-      .send({
-        groupId: "",
-        accessToken: "vk-community-token",
-      })
-      .expect(400);
-  });
-
   it("lists accounts for the current user", async () => {
     const response = await request(app).get("/accounts").expect(200);
 
@@ -144,11 +102,11 @@ describe("oauth routes", () => {
   });
 
   it("disconnects an account for the current user", async () => {
-    await request(app).delete("/accounts/vk").expect(204);
+    await request(app).delete("/accounts/youtube").expect(204);
 
     expect(serviceMocks.disconnectAccount).toHaveBeenCalledWith(
       "11111111-1111-4111-8111-111111111111",
-      "vk",
+      "youtube",
     );
   });
 

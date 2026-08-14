@@ -1,52 +1,48 @@
 # VideoFlow
 
 VideoFlow — PWA-сервис для подготовки, планирования и автоматической публикации
-коротких вертикальных видео в несколько социальных сетей. Пользователь загружает
-видео один раз, задаёт отдельные описания и время, а backend публикует контент
-независимо от состояния телефона или браузера.
+коротких вертикальных видео в социальные сети. Пользователь загружает видео один
+раз, задаёт отдельные описания и время, а backend публикует контент независимо от
+состояния телефона или браузера.
 
-Проект развивается в двух горизонтах:
+Продукт создаётся для одного креатора UJC Creator, работающего с iPhone и iPad и
+публикующего 80–120 видео в месяц по московскому времени.
 
-- сначала — быстрый PWA-first продукт для одного креатора;
-- затем — коммерческий SaaS с рабочими пространствами, тарифами, лимитами и
-  командной работой.
+## Источник требований
 
-Исходное ТЗ DiPost используется как источник продуктовых пожеланий, но не как
-неизменяемый контракт. Возможности платформ включаются только после проверки
-официальных API, разрешений, review-процессов и реального end-to-end publish.
+Основной источник продуктовых требований — утверждённое ТЗ `DiPost_TZ_v1.0.md`
+от 25 июля 2026 года.
 
-## Текущий статус
+Согласовано одно отклонение: первая реализация использует responsive PWA вместо
+native iOS-приложения. Поэтому APNs заменяется Web Push для установленной PWA, а
+Keychain — безопасной web-сессией; токены социальных платформ по-прежнему
+хранятся только зашифрованными на backend.
 
-В репозитории уже реализованы:
+## Платформы
+
+- MVP: Instagram Reels, TikTok и YouTube Shorts;
+- этап 2: VK Clips и Pinterest Video Pin;
+- Threads не входит в текущий scope.
+
+Интеграция считается реализованной только после успешной публикации через
+официальный Content Publishing API. Экспериментальные link-post сценарии не
+считаются поддержкой платформы.
+
+## Текущий baseline
+
+Уже реализованы:
 
 - React/Vite PWA с адаптивным интерфейсом;
 - email/password authentication и refresh-сессии;
 - загрузка видео напрямую в Cloudflare R2;
 - Publications API;
 - PostgreSQL/Prisma;
-- Redis/BullMQ scheduler и worker;
-- статусы публикаций, retry и частичный успех;
-- история, расписание и экран подключённых аккаунтов;
-- экспериментальная VK-интеграция.
+- Redis/BullMQ scheduler и отдельный worker;
+- платформенные статусы, история и ручной retry;
+- YouTube OAuth foundation.
 
-Текущий VK flow не определяет новый MVP: VK переведён в отложенный трек из-за
-ограничений официального API. Главные кандидаты следующего этапа — Instagram
-Reels, TikTok и YouTube Shorts, но каждый проходит отдельный feasibility gate.
-
-## Продуктовые принципы
-
-1. **PWA-first, не PWA-only.** Быстро используем готовый web-клиент. Нативный
-   iOS-клиент рассматривается позже, если ограничения PWA мешают продуктовым
-   метрикам.
-2. **Server-side publishing.** Все отложенные публикации выполняет backend worker.
-3. **Official APIs only.** Не используем браузерную автоматизацию и не обходим
-   ограничения социальных платформ.
-4. **Capability-aware UX.** Интерфейс показывает только реально поддерживаемые
-   конкретной платформой поля, метрики и действия.
-5. **SaaS-ready domain.** MVP остаётся простым, но новые сущности проектируются с
-   границами workspace, тарифов и лимитов.
-6. **Security before integrations.** OAuth-секреты не попадают в клиент, логи и
-   незашифрованные поля базы.
+Publishers Instagram, TikTok и YouTube пока не реализованы. Черновики, недельный
+календарь, Web Push, аналитика и семидневный retention также требуют разработки.
 
 ## Стек
 
@@ -55,17 +51,15 @@ Reels, TikTok и YouTube Shorts, но каждый проходит отдель
 - Data: PostgreSQL 16, Prisma
 - Queue: Redis 7, BullMQ
 - Media storage: Cloudflare R2
-- Deployment: Docker Compose, Nginx, HTTPS
-- Notifications: in-app status, Web Push; email fallback — продуктовая опция
+- Deployment: Docker Compose, HTTPS reverse proxy
 
-## Структура репозитория
+## Структура
 
 ```text
 frontend/       React + Vite PWA
-backend/        REST API, application services, workers, platform adapters
-infrastructure/ Docker Compose and deployment assets
-docs/           Current product and architecture documentation
-.local/         Ignored historical plans and private working notes
+backend/        REST API, services, workers and platform adapters
+infrastructure/ Docker Compose
+docs/           Product, architecture and delivery documentation
 ```
 
 ## Локальный запуск
@@ -79,14 +73,8 @@ pnpm --filter @videoflow/backend prisma:deploy
 pnpm dev
 ```
 
-По умолчанию:
-
-- frontend: `http://localhost:5173`
-- backend: `http://localhost:3000`
-- PostgreSQL: `localhost:5433`
-- Redis: `localhost:6379`
-
-Для worker в отдельном терминале:
+По умолчанию frontend доступен на `http://localhost:5173`, backend — на
+`http://localhost:3000`. Worker запускается отдельно:
 
 ```bash
 pnpm --filter @videoflow/backend worker:dev
@@ -102,9 +90,8 @@ pnpm build
 
 ## Документация
 
-- [Продуктовые требования](docs/product-requirements.md)
-- [Целевая архитектура](docs/architecture.md)
+- [Адаптированные требования](docs/product-requirements.md)
+- [Архитектура](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
-- [Platform feasibility gates](docs/platform-feasibility.md)
-- [ADR 0001: исходная архитектура](docs/adr/0001-architecture.md)
-- [ADR 0002: PWA-first и SaaS-ready направление](docs/adr/0002-pwa-first-saas-ready.md)
+- [Platform feasibility](docs/platform-feasibility.md)
+- [ADR 0001: PWA для первой реализации](docs/adr/0001-architecture.md)

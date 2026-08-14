@@ -16,7 +16,6 @@ export interface AuthUserResponse {
   id: string;
   email: string;
   timezone: string;
-  emailNotificationsEnabled: boolean;
 }
 
 export interface AuthSession {
@@ -29,13 +28,11 @@ function toAuthUserResponse(user: {
   id: string;
   email: string;
   timezone: string;
-  emailNotificationsEnabled: boolean;
 }): AuthUserResponse {
   return {
     id: user.id,
     email: user.email,
     timezone: user.timezone,
-    emailNotificationsEnabled: user.emailNotificationsEnabled,
   };
 }
 
@@ -82,7 +79,6 @@ export async function registerUser(input: RegisterInput): Promise<AuthSession> {
       id: true,
       email: true,
       timezone: true,
-      emailNotificationsEnabled: true,
     },
   });
 
@@ -129,7 +125,6 @@ export async function refreshSession(refreshToken: string): Promise<AuthSession>
           id: true,
           email: true,
           timezone: true,
-          emailNotificationsEnabled: true,
         },
       },
     },
@@ -181,7 +176,6 @@ export async function getUserById(userId: string): Promise<AuthUserResponse> {
       id: true,
       email: true,
       timezone: true,
-      emailNotificationsEnabled: true,
     },
   });
 

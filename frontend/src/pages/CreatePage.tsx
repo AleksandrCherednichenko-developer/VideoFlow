@@ -94,16 +94,19 @@ export function CreatePage() {
   const [date, setDate] = useState(initialSchedule.date);
   const [time, setTime] = useState(initialSchedule.time);
   const [platforms, setPlatforms] = useState<PlatformSelectionState>({
-    youtube: false,
-    vk: true,
+    youtube: true,
+    instagram: false,
+    tiktok: false,
   });
   const [youtubeTitle, setYoutubeTitle] = useState("");
   const [overrides, setOverrides] = useState<PlatformOverrideState>({
     youtubeText: "",
-    vkText: "",
+    instagramText: "",
+    tiktokText: "",
   });
   const [showYoutubeOverride, setShowYoutubeOverride] = useState(false);
-  const [showVkOverride, setShowVkOverride] = useState(false);
+  const [showInstagramOverride, setShowInstagramOverride] = useState(false);
+  const [showTikTokOverride, setShowTikTokOverride] = useState(false);
   const [step, setStep] = useState<CreateStep>(CREATE_STEP.IDLE);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
@@ -254,7 +257,7 @@ export function CreatePage() {
     <>
       <PageHeader
         title="Create publication"
-        description="Upload one video, choose YouTube or VK, and schedule the backend publishing job."
+        description="Upload one video, choose MVP platforms, and schedule the backend publishing job."
       />
 
       <form className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]" onSubmit={handleSubmit}>
@@ -375,14 +378,34 @@ export function CreatePage() {
             <div className="mt-4 space-y-4">
               <label className="flex items-start gap-3 rounded-md border border-border p-3">
                 <input
-                  checked={platforms.vk}
+                  checked={platforms.instagram}
                   className="mt-1 h-4 w-4 accent-primary"
                   disabled={isBusy}
                   type="checkbox"
-                  onChange={(event) => updatePlatform("vk", event.target.checked)}
+                  onChange={(event) =>
+                    updatePlatform("instagram", event.target.checked)
+                  }
                 />
                 <span>
-                  <span className="block text-sm font-medium">VK</span>
+                  <span className="block text-sm font-medium">Instagram</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">
+                    Uses the default text unless an override is set.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 rounded-md border border-border p-3">
+                <input
+                  checked={platforms.tiktok}
+                  className="mt-1 h-4 w-4 accent-primary"
+                  disabled={isBusy}
+                  type="checkbox"
+                  onChange={(event) =>
+                    updatePlatform("tiktok", event.target.checked)
+                  }
+                />
+                <span>
+                  <span className="block text-sm font-medium">TikTok</span>
                   <span className="mt-1 block text-sm text-muted-foreground">
                     Uses the default text unless an override is set.
                   </span>
@@ -447,18 +470,46 @@ export function CreatePage() {
                   disabled={isBusy}
                   type="button"
                   variant="outline"
-                  onClick={() => setShowVkOverride((isShown) => !isShown)}
+                  onClick={() =>
+                    setShowInstagramOverride((isShown) => !isShown)
+                  }
                 >
-                  VK override
-                  <span>{showVkOverride ? "Hide" : "Edit"}</span>
+                  Instagram override
+                  <span>{showInstagramOverride ? "Hide" : "Edit"}</span>
                 </Button>
-                {showVkOverride ? (
+                {showInstagramOverride ? (
                   <Textarea
                     className="mt-3 min-h-24"
                     disabled={isBusy}
                     placeholder="Leave empty to use the default text."
-                    value={overrides.vkText}
-                    onChange={(event) => updateOverride("vkText", event.target.value)}
+                    value={overrides.instagramText}
+                    onChange={(event) =>
+                      updateOverride("instagramText", event.target.value)
+                    }
+                  />
+                ) : null}
+              </div>
+
+              <div>
+                <Button
+                  className="w-full justify-between"
+                  disabled={isBusy}
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowTikTokOverride((isShown) => !isShown)}
+                >
+                  TikTok override
+                  <span>{showTikTokOverride ? "Hide" : "Edit"}</span>
+                </Button>
+                {showTikTokOverride ? (
+                  <Textarea
+                    className="mt-3 min-h-24"
+                    disabled={isBusy}
+                    placeholder="Leave empty to use the default text."
+                    value={overrides.tiktokText}
+                    onChange={(event) =>
+                      updateOverride("tiktokText", event.target.value)
+                    }
                   />
                 ) : null}
               </div>

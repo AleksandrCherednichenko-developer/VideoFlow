@@ -28,7 +28,7 @@ function buildPublication(
     status: PUBLICATION_STATUS.SCHEDULED,
     platforms: [
       {
-        platform: PLATFORM.VK,
+        platform: PLATFORM.INSTAGRAM,
         enabled: true,
         text: null,
       },
@@ -45,7 +45,7 @@ describe("publicationViewModel", () => {
   it("filters publications by status and platform", () => {
     const publications = [
       buildPublication({
-        id: "scheduled-vk",
+        id: "scheduled-instagram",
         status: PUBLICATION_STATUS.SCHEDULED,
       }),
       buildPublication({
@@ -134,7 +134,7 @@ describe("publicationViewModel", () => {
       buildPublication({
         platforms: [
           {
-            platform: PLATFORM.VK,
+            platform: PLATFORM.INSTAGRAM,
             enabled: true,
             text: null,
           },
@@ -148,10 +148,10 @@ describe("publicationViewModel", () => {
         results: [
           {
             id: "result-id",
-            platform: PLATFORM.VK,
+            platform: PLATFORM.INSTAGRAM,
             status: PLATFORM_RESULT_STATUS.PUBLISHED,
-            externalId: "vk-id",
-            resultUrl: "https://vk.example/video",
+            externalId: "instagram-id",
+            resultUrl: "https://instagram.example/video",
             errorCode: null,
             errorMessage: null,
             rawResponse: null,
@@ -164,10 +164,10 @@ describe("publicationViewModel", () => {
 
     expect(rows).toEqual([
       {
-        platform: PLATFORM.VK,
-        label: "VK",
+        platform: PLATFORM.INSTAGRAM,
+        label: "Instagram",
         status: PLATFORM_RESULT_STATUS.PUBLISHED,
-        resultUrl: "https://vk.example/video",
+        resultUrl: "https://instagram.example/video",
         errorMessage: null,
       },
       {

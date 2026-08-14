@@ -7,12 +7,7 @@ export const oauthPlatformParamsSchema = z.object({
 });
 
 export const accountPlatformParamsSchema = z.object({
-  platform: z.enum([PLATFORM.YOUTUBE, PLATFORM.VK]),
-});
-
-export const vkConnectBodySchema = z.object({
-  groupId: z.string().min(1),
-  accessToken: z.string().min(1),
+  platform: z.enum([PLATFORM.YOUTUBE]),
 });
 
 export const oauthCallbackQuerySchema = z.object({
@@ -24,4 +19,3 @@ export const oauthCallbackQuerySchema = z.object({
 export type OAuthPlatformParams = z.infer<typeof oauthPlatformParamsSchema>;
 export type AccountPlatformParams = z.infer<typeof accountPlatformParamsSchema>;
 export type OAuthCallbackQuery = z.infer<typeof oauthCallbackQuerySchema>;
-export type VkConnectBody = z.infer<typeof vkConnectBodySchema>;
