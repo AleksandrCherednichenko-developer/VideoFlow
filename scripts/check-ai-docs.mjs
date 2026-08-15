@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 export const REQUIRED_DOCUMENTS = [
   "README.md",
   "AGENTS.md",
-  "docs/source/DiPost_TZ_v1.0.md",
+  "docs/source/TZ_v1.0.md",
   "docs/product-requirements.md",
   "docs/platform-feasibility.md",
   "docs/adr/0001-architecture.md",

@@ -59,7 +59,9 @@ OAuth `code` и `state`. Это противоречит security boundary в
 - `backend/src/services/oauth/accountService.ts`
 - `backend/src/services/oauth/accountService.test.ts`
 - `backend/src/api/middleware/requestLogger.ts`
+- `backend/src/api/middleware/requestLogger.test.ts` (new)
 - `backend/src/api/routes/oauth.routes.test.ts`
+- `backend/src/services/oauth/oauthMetadataMigration.test.ts` (new)
 - `backend/prisma/migrations/`
 
 ## Reuse
@@ -114,6 +116,58 @@ OAuth `code` и `state`. Это противоречит security boundary в
 - Migration полностью заменяет legacy metadata и сохраняет account identity.
 - Account list/connect/disconnect behavior и response shape не изменились.
 - Security regression tests проходят вместе с полным набором проекта.
+
+## Implementation plan
+
+### 1. Зафиксировать уязвимое поведение тестами
+
+- расширить `accountService.test.ts`: проверить точную allowlisted metadata для
+  create/update, отсутствие обоих raw responses и поведение без optional profile;
+- добавить `requestLogger.test.ts` с захватом stream: sensitive query,
+  case-insensitive keys, повторяющиеся параметры, percent encoding, безопасный
+  query и malformed URL;
+- сначала получить ожидаемые failures, не меняя production code.
+
+### 2. Закрыть persisted metadata
+
+- заменить `buildAccountMetadata(tokens, profile)` на helper, принимающий только
+  `platform` и безопасные поля `OAuthAccountProfile`;
+- формировать `{ provider, profile? }` через явный allowlist без spread/raw copy;
+- использовать один helper в `create` и `update`; encryption и refresh-token
+  semantics не менять;
+- проверять результат через аргументы существующего Prisma `upsert` mock.
+
+### 3. Закрыть OAuth URL logs
+
+- реализовать pure `sanitizeRequestUrl`, который redacts все значения
+  `code`, `state`, `access_token`, `refresh_token`, `token` без учёта регистра;
+- сохранить порядок, повторения и безопасные query parameters;
+- при невозможности разобрать URL логировать только path до `?`;
+- заменить `combined` на эквивалентный custom Morgan format с sanitized URL и
+  `response-time`; сохранить экспорт готового `requestLogger` и добавить factory
+  с injectable stream только для тестирования.
+
+### 4. Очистить существующие строки
+
+- создать отдельную Prisma migration
+  `20260815000000_sanitize_oauth_account_metadata`;
+- одним `UPDATE platform_accounts` заменить metadata через
+  `jsonb_strip_nulls(jsonb_build_object(...))` данными из `platform`,
+  `external_account_id` и `external_account_name`;
+- добавлять `profile` только когда присутствует ID или name; raw JSON не читать и
+  не переносить;
+- migration должна быть идемпотентной и не менять token columns, identity,
+  timestamps или Prisma schema;
+- добавить contract-test SQL assumptions и проверить migration на отдельной
+  legacy fixture в PostgreSQL перед применением к рабочей базе.
+
+### 5. Регрессия и закрытие задачи
+
+- подтвердить неизменность connect/list/disconnect response contracts;
+- выполнить автоматические и ручные проверки из `Verification`;
+- перевести TASK и backlog в `Done`, убрать `LW-001`, обновить `CHANGES` и при
+  необходимости `TECH_DEBT` только после фактической проверки базы и логов;
+- переключить `CURRENT_SPRINT` на следующую задачу отдельным planning change.
 
 ## Verification
 

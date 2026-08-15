@@ -35,7 +35,7 @@
 
 ## Иерархия источников истины
 
-1. [DiPost ТЗ v1.0](../source/DiPost_TZ_v1.0.md).
+1. [DiPost ТЗ v1.0](../source/TZ_v1.0.md).
 2. [Адаптированные требования](../product-requirements.md) и
    [ADR 0001](../adr/0001-architecture.md).
 3. [Platform feasibility](../platform-feasibility.md).

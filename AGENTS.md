@@ -16,7 +16,7 @@ VideoFlow использует минимальный достаточный к�
 
 При конфликте используй следующий приоритет:
 
-1. [утверждённое ТЗ](docs/source/DiPost_TZ_v1.0.md);
+1. [утверждённое ТЗ](docs/source/TZ_v1.0.md);
 2. [адаптированные требования](docs/product-requirements.md) и
    [ADR](docs/adr/0001-architecture.md);
 3. [platform feasibility](docs/platform-feasibility.md);
