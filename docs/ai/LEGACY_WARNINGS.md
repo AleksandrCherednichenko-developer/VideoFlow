@@ -3,17 +3,6 @@
 Legacy warning описывает опасное текущее поведение. Оно не разрешает агенту
 начинать несвязанный рефакторинг; исправление выполняется отдельной задачей.
 
-## LW-001: OAuth secrets дублируются в metadata и URL logs
-
-- Severity: Critical
-- Status: Open
-- Owner task: [TASK-001](tasks/TASK-001-security-baseline.md)
-- Affected: `accountService.ts`, `requestLogger.ts`, existing PlatformAccount rows
-- Current behavior: raw token/profile responses записываются в JSON metadata;
-  Morgan combined логирует OAuth callback query с code/state.
-- Rule: не копировать этот подход в новые providers и не выполнять live OAuth с
-  production credentials до закрытия TASK-001.
-
 ## LW-002: Frontend default API port не совпадает с README
 
 - Severity: Medium

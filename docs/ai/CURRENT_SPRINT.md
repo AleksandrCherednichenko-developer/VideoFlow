@@ -10,7 +10,7 @@
 
 [TASK-001: Security baseline](tasks/TASK-001-security-baseline.md)
 
-- Status: Ready
+- Status: In progress
 - Priority: Critical
 - Expected size: 2–5 working days
 - Depends on: current auth/OAuth tests and migration baseline

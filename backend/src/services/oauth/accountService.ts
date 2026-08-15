@@ -70,13 +70,22 @@ function serializeAccount(account: PlatformAccount): AccountResponse {
 }
 
 function buildAccountMetadata(
-  tokens: OAuthTokens,
+  platform: Platform,
   profile: OAuthAccountProfile,
 ): Prisma.InputJsonObject {
+  const profileMetadata: Prisma.InputJsonObject = {
+    ...(profile.externalAccountId !== undefined
+      ? { externalAccountId: profile.externalAccountId }
+      : {}),
+    ...(profile.externalAccountName !== undefined
+      ? { externalAccountName: profile.externalAccountName }
+      : {}),
+  };
+
   return {
-    tokenResponse: tokens.rawResponse as Prisma.InputJsonValue,
-    ...(profile.rawResponse !== undefined
-      ? { profileResponse: profile.rawResponse as Prisma.InputJsonValue }
+    provider: platform,
+    ...(Object.keys(profileMetadata).length > 0
+      ? { profile: profileMetadata }
       : {}),
   };
 }
@@ -136,7 +145,7 @@ export async function completeOAuthCallback(
       accessTokenEncrypted: encryptSecret(tokens.accessToken),
       ...buildRefreshTokenData(tokens.refreshToken),
       expiresAt: tokens.expiresAt ?? null,
-      metadata: buildAccountMetadata(tokens, profile),
+      metadata: buildAccountMetadata(platform, profile),
       isActive: true,
     },
     update: {
@@ -147,7 +156,7 @@ export async function completeOAuthCallback(
         ? { refreshTokenEncrypted: encryptSecret(tokens.refreshToken) }
         : {}),
       expiresAt: tokens.expiresAt ?? null,
-      metadata: buildAccountMetadata(tokens, profile),
+      metadata: buildAccountMetadata(platform, profile),
       isActive: true,
     },
   });

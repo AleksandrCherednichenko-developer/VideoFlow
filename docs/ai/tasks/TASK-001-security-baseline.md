@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+In progress
 
 ## Goal
 
@@ -184,6 +184,18 @@ pnpm docs:check
 2. Проверить access log: реальные значения отсутствуют.
 3. Проверить PlatformAccount: encrypted columns заполнены, metadata allowlisted.
 4. Применить migration к копии legacy-строки и убедиться, что raw payload удалён.
+
+### Verification result — 2026-08-15
+
+- Targeted security tests: 19 passed.
+- Full regression: backend 77 passed, frontend 18 passed.
+- Typecheck, production build, `docs:check`, `docs:check:test`: passed.
+- OAuth route integration log: callback `code`/`state` отображаются только как
+  `%5BREDACTED%5D`; status, response size и response time сохранены.
+- PostgreSQL fixture: legacy object/array metadata очищены; повторная migration
+  дала идентичный результат.
+- Coverage report не создан: `@vitest/coverage-v8` отсутствует, а добавление
+  dependency запрещено scope; общий coverage threshold остаётся `TD-006`.
 
 ## Technical debt
 

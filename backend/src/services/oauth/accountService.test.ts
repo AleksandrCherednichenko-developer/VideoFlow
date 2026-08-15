@@ -153,6 +153,45 @@ describe("accountService", () => {
     );
   });
 
+  it("stores only allowlisted account metadata", async () => {
+    await completeOAuthCallback(PLATFORM.YOUTUBE, "code", "state");
+
+    const upsert = prismaMocks.platformAccount.upsert.mock.calls[0]?.[0];
+    const expectedMetadata = {
+      provider: PLATFORM.YOUTUBE,
+      profile: {
+        externalAccountId: "youtube-channel-id",
+        externalAccountName: "YouTube Channel",
+      },
+    };
+
+    expect(upsert?.create.metadata).toEqual(expectedMetadata);
+    expect(upsert?.update.metadata).toEqual(expectedMetadata);
+  });
+
+  it("omits optional profile metadata and ignores unknown raw secrets", async () => {
+    providerMocks.exchangeCode.mockResolvedValueOnce({
+      accessToken: "access-token-fixture",
+      rawResponse: {
+        provider_specific_credential: "credential-fixture",
+      },
+    });
+    providerMocks.fetchAccountProfile.mockResolvedValueOnce({
+      rawResponse: {
+        nested: {
+          access_token: "nested-token-fixture",
+        },
+      },
+    });
+
+    await completeOAuthCallback(PLATFORM.YOUTUBE, "code", "state");
+
+    const upsert = prismaMocks.platformAccount.upsert.mock.calls[0]?.[0];
+
+    expect(upsert?.create.metadata).toEqual({ provider: PLATFORM.YOUTUBE });
+    expect(upsert?.update.metadata).toEqual({ provider: PLATFORM.YOUTUBE });
+  });
+
   it("lists safe account responses", async () => {
     const accounts = await listAccounts(userId);
 
