@@ -14,6 +14,14 @@
 - [YouTube upload guide](https://developers.google.com/youtube/v3/guides/uploading_a_video)
 - [YouTube resumable uploads](https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol)
 - [YouTube videos resource](https://developers.google.com/youtube/v3/docs/videos)
+- [YouTube videos.insert](https://developers.google.com/youtube/v3/docs/videos/insert)
+- [YouTube videos.list](https://developers.google.com/youtube/v3/docs/videos/list)
+- [YouTube Data API overview and quota](https://developers.google.com/youtube/v3/getting-started)
+- [YouTube OAuth for web server apps](https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps)
+- [Google OAuth app audience](https://support.google.com/cloud/answer/15549945)
+- [YouTube required minimum functionality](https://developers.google.com/youtube/terms/required-minimum-functionality)
+- [YouTube developer policies](https://developers.google.com/youtube/terms/developer-policies)
+- [YouTube Shorts eligibility](https://support.google.com/youtube/answer/15424877)
 
 VK Clips и Pinterest links добавляются только при подготовке этапа 2.
 

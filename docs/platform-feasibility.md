@@ -94,6 +94,20 @@ Official starting points:
 - Shorts определяется YouTube по параметрам контента, а не отдельным upload API;
 - processing status проверяется после загрузки.
 
+Официальные ограничения, требующие live-подтверждения в TASK-002:
+
+- unverified API projects принудительно ограничивают uploads режимом `private`;
+- OAuth consent в статусе Testing ограничивает test-user authorization и refresh
+  token семью днями;
+- upload UI обязан дать пользователю title, description и выбор
+  public/private/unlisted;
+- API limit title — 100 символов, description — 5000 bytes;
+- актуальная документация выделяет 100 `videos.insert` calls/day и стоимость один
+  unit в отдельном Video Uploads quota bucket; фактический Console limit важнее
+  документационного default;
+- продукт сохраняет более строгое ограничение 9:16 и 60 секунд, хотя текущие
+  правила YouTube допускают более длинные Shorts.
+
 ### Gate checklist
 
 - [ ] Создать Google Cloud project.
@@ -101,17 +115,25 @@ Official starting points:
 - [ ] Настроить OAuth consent screen и redirect URL.
 - [ ] Проверить refresh token lifecycle.
 - [ ] Выполнить resumable upload.
+- [ ] Проверить status query и продолжение interrupted upload session.
 - [ ] Проверить public/unlisted visibility.
 - [ ] Зафиксировать OAuth verification и API audit requirements.
 - [ ] Проверить quota на ожидаемый объём.
 - [ ] Получить video URL и processing status.
 - [ ] Получить доступные statistics.
+- [ ] Проверить required minimum functionality и audience/Made for Kids decision.
+- [ ] Зафиксировать решение `supported`, `supported_with_limits`, `blocked` или
+      `requires_review` в sanitized gate report.
 
 Official starting points:
 
 - <https://developers.google.com/youtube/v3/guides/uploading_a_video>
 - <https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol>
 - <https://developers.google.com/youtube/v3/docs/videos>
+- <https://developers.google.com/youtube/v3/docs/videos/insert>
+- <https://developers.google.com/youtube/v3/docs/videos/list>
+- <https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps>
+- <https://developers.google.com/youtube/terms/required-minimum-functionality>
 
 ## VK
 

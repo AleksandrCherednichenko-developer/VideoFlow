@@ -5,8 +5,8 @@
 
 | ID | Result | Priority | Status | Depends on | Exit gate |
 |---|---|---|---|---|---|
-| TASK-001 | OAuth metadata и request logs не содержат secrets | Critical | In progress | Current baseline | Security tests + safe migration |
-| TASK-002 | Документированное YouTube live-publish feasibility решение | Critical | Draft | TASK-001, Google test app/account | Gate report: supported/limited/blocked |
+| TASK-001 | OAuth metadata и request logs не содержат secrets | Critical | Done | Current baseline | Security tests + safe migration |
+| TASK-002 | Документированное YouTube live-publish feasibility решение | Critical | In progress | TASK-001, Google test app/account | Gate report: supported/limited/blocked |
 | TASK-003 | Worker выполняет resumable YouTube upload и сохраняет final URL/status | Critical | Draft | TASK-002 supported | Live E2E + failure tests |
 | TASK-004 | Документированное Instagram Reels feasibility решение | Critical | Draft | TASK-001, Meta test app/account | Gate report |
 | TASK-005 | Instagram account подключается официальным OAuth flow | High | Draft | TASK-004 supported | OAuth E2E + encrypted token lifecycle |

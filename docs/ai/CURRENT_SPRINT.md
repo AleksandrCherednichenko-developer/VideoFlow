@@ -2,35 +2,39 @@
 
 ## Goal
 
-Сделать существующий OAuth flow безопасной базой для дальнейших P0-интеграций:
-исключить секреты из persisted metadata и HTTP access logs без изменения
-публичного account API.
+Получить подтверждённое официальными документами и live test решение о
+пригодности YouTube Data API для server-side scheduled Shorts publishing до
+разработки production publisher.
 
 ## Active task
 
-[TASK-001: Security baseline](tasks/TASK-001-security-baseline.md)
+[TASK-002: YouTube feasibility evidence](tasks/TASK-002-youtube-feasibility-evidence.md)
 
 - Status: In progress
 - Priority: Critical
 - Expected size: 2–5 working days
-- Depends on: current auth/OAuth tests and migration baseline
+- Depends on: completed TASK-001, owner-provided Google project/test account
 
 ## Definition of Done
 
-- OAuth token/code/state отсутствуют в новых metadata и request logs.
-- Существующие небезопасные metadata очищаются migration.
-- Public auth/account responses остаются совместимыми.
-- Новые security tests и все существующие проверки проходят.
-- CHANGES и закрытые warnings/debt обновлены.
+- Current OAuth подключает реальный test channel и refresh token проверен.
+- Разрешённый владельцем private fixture загружен resumable flow.
+- Processing, effective privacy, URL, quota и statistics подтверждены evidence.
+- OAuth verification, API audit и mandatory upload UX ограничения зафиксированы.
+- Gate имеет одно решение и явные requirements/blockers для TASK-003.
+- Credentials и raw provider responses отсутствуют в repository и logs.
 
 ## Known risks
 
-- JSON metadata может содержать provider-specific формы секретов, поэтому
-  migration должна заменять объект целиком, а не удалять несколько известных keys.
-- Access logger должен сохранить полезные method/status/timing данные.
-- Production migration требует backup и выборочной проверки до deploy.
+- Без Google project, test account и разрешения на live upload задача становится
+  `Blocked`; mock upload не является evidence.
+- OAuth consent в статусе Testing ограничивает test-user authorization семью днями.
+- Unverified API project может принудительно оставить upload private до audit.
+- Текущий VideoFlow не даёт выбрать privacy и разрешает title длиннее YouTube limit.
+- Удаление созданного test video требует отдельного разрешения владельца.
 
 ## Next candidate
 
-После завершения TASK-001 следующий кандидат определяется из
-[BACKLOG](BACKLOG.md): `TASK-002 YouTube feasibility evidence`.
+Если gate даст `supported` или `supported_with_limits`, следующий кандидат —
+`TASK-003 YouTube resumable publisher`. При `blocked` или `requires_review`
+сначала закрывается указанный внешний blocker.
