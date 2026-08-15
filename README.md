@@ -10,8 +10,8 @@ VideoFlow — PWA-сервис для подготовки, планирован
 
 ## Источник требований
 
-Основной источник продуктовых требований — утверждённое ТЗ `DiPost_TZ_v1.0.md`
-от 25 июля 2026 года.
+Основной источник продуктовых требований — утверждённое
+[ТЗ DiPost v1.0](docs/source/DiPost_TZ_v1.0.md) от 25 июля 2026 года.
 
 Согласовано одно отклонение: первая реализация использует responsive PWA вместо
 native iOS-приложения. Поэтому APNs заменяется Web Push для установленной PWA, а
@@ -70,11 +70,14 @@ pnpm install
 docker compose -f infrastructure/docker-compose.yml up -d postgres redis
 pnpm --filter @videoflow/backend prisma:generate
 pnpm --filter @videoflow/backend prisma:deploy
-pnpm dev
+VITE_API_URL=http://localhost:3000 pnpm dev
 ```
 
 По умолчанию frontend доступен на `http://localhost:5173`, backend — на
-`http://localhost:3000`. Worker запускается отдельно:
+`http://localhost:3000`. Явный `VITE_API_URL` нужен до устранения расхождения
+fallback-порта, описанного в
+[legacy warnings](docs/ai/LEGACY_WARNINGS.md#lw-002-frontend-api-port-mismatch).
+Worker запускается отдельно:
 
 ```bash
 pnpm --filter @videoflow/backend worker:dev
@@ -83,15 +86,30 @@ pnpm --filter @videoflow/backend worker:dev
 ## Проверки
 
 ```bash
+pnpm docs:check
+pnpm docs:check:test
 pnpm typecheck
 pnpm test
 pnpm build
 ```
 
+## AI-ready workflow
+
+Перед началом инженерной задачи откройте [AGENTS.md](AGENTS.md), затем
+[текущий спринт](docs/ai/CURRENT_SPRINT.md) и единственный связанный с ним
+TASK-файл. Полный индекс канонического инженерного контекста находится в
+[`docs/ai/`](docs/ai/README.md).
+
+Будущая работа хранится компактно в backlog. Полная спецификация создаётся по
+шаблону только при переводе задачи в `Ready`. TASK-файл не меняет продуктовые
+или архитектурные решения без Change Request и, при необходимости, ADR.
+
 ## Документация
 
+- [AI-ready инженерный контекст](docs/ai/README.md)
+- [Текущий спринт](docs/ai/CURRENT_SPRINT.md)
+- [Backlog](docs/ai/BACKLOG.md)
 - [Адаптированные требования](docs/product-requirements.md)
-- [Архитектура](docs/architecture.md)
-- [Roadmap](docs/roadmap.md)
+- [Каноническая архитектура](docs/ai/ARCHITECTURE.md)
 - [Platform feasibility](docs/platform-feasibility.md)
 - [ADR 0001: PWA для первой реализации](docs/adr/0001-architecture.md)

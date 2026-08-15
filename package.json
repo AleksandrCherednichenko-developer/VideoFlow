@@ -10,6 +10,8 @@
     "test": "pnpm --recursive test",
     "lint": "pnpm --recursive lint",
     "typecheck": "pnpm --recursive typecheck",
+    "docs:check": "node scripts/check-ai-docs.mjs",
+    "docs:check:test": "node --test scripts/check-ai-docs.test.mjs",
     "docker:up": "docker compose -f infrastructure/docker-compose.yml up -d",
     "docker:down": "docker compose -f infrastructure/docker-compose.yml down"
   },
